@@ -1,0 +1,8 @@
+#include "nsISupports.idl"
+#include "nsIDOMElement.idl"
+
+[scriptable, uuid(6f7ee12b-12b3-4101-a4c9-ecdc97c51421)]
+interface nsIEveApiService : nsISupports {
+	nsIDOMElement getServerStatus();
+	nsIDOMElement getCharacterList(in string id, in string key);
+};
