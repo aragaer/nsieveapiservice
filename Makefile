@@ -1,3 +1,3 @@
-include ../OBJ_RULES
+include ../COMPONENT_RULES
 FILES = eveapiservice.js
 all: js
