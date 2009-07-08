@@ -5,4 +5,5 @@
 interface nsIEveApiService : nsISupports {
 	nsIDOMElement getServerStatus();
 	nsIDOMElement getCharacterList(in string id, in string key);
+	nsIDOMElement getCharacterSkills(in string id, in string key, in string charID);
 };

@@ -6,8 +6,9 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
-    serverStatus:    "/server/ServerStatus.xml.aspx",
-    characters:      "/account/Characters.xml.aspx",
+    serverStatus:   "/server/ServerStatus.xml.aspx",
+    characters:     "/account/Characters.xml.aspx",
+    charsheet:      "/char/CharacterSheet.xml.aspx",
 };
 
 function EveApiService() { }
@@ -26,9 +27,17 @@ EveApiService.prototype = {
         return performRequest(null, 'serverStatus')
     },
     
-    getCharacterList:    function (id, key) {
+    getCharacterList:   function (id, key) {
         return performRequest('userID='+escape(id)+'&apiKey='+escape(key),
                 'characters', function (req) {
+                    return evaluateXPath(req.responseXML, "//rowset")[0];
+                });
+    },
+
+    getCharacterSkills: function (id, key, charID) {
+        return performRequest('userID='+escape(id)+'&apiKey='+escape(key)+
+                    '&characterID='+escape(charID),
+                'charsheet', function (req) {
                     return evaluateXPath(req.responseXML, "//rowset")[0];
                 });
     }
