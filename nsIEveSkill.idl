@@ -1,0 +1,13 @@
+#include "nsISupports.idl"
+
+[scriptable, uuid(07f1eb08-b7a7-4d73-bb41-e5922cca94c1)]
+interface nsIEveSkill : nsISupports {
+    readonly attribute string name;
+    readonly attribute short group;
+    readonly attribute long id;
+    readonly attribute short rank;
+    readonly attribute short primary_stat;
+    readonly attribute short secondary_stat;
+    readonly attribute short level;
+    readonly attribute long current_sp;
+};

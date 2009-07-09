@@ -1,13 +1,15 @@
 #include "nsISupports.idl"
 #include "nsIDOMElement.idl"
 #include "nsIEveItem.idl"
+#include "nsIEveSkill.idl"
 
 [scriptable, uuid(6f7ee12b-12b3-4101-a4c9-ecdc97c51421)]
 interface nsIEveApiService : nsISupports {
 	nsIDOMElement getServerStatus();
 	nsIDOMElement getCharacterList(in string id, in string key);
-	nsIDOMElement getCharacterSkills(in string id, in string key, in string charID);
 	void getCharacterAssets(in string id, in string key, in string charID,
                 out unsigned long count,
                 [array, size_is(count), retval] out nsIEveItem retv);
+	void getCharacterSkills(in string id, in string key, in string charID,
+            out unsigned long count, [array, size_is(count), retval] out nsIEveSkill retv);
 };
