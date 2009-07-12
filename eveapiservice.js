@@ -42,14 +42,36 @@ EveApiService.prototype = {
                 });
     }
 };
-var components = [EveApiService];
+
+function EveServerStatus() {
+    this.is_online = false;
+    this.players = 0;
+}
+
+EveServerStatus.prototype = {
+    classDescription:   "EVE Online Server Status",
+    classID:            Components.ID("{b0274794-98da-45fd-8cf1-361cac351395}"),
+    contractID:         "@aragaer.com/eve-server-status;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveServerStatus]),
+    get onlinePlayers:  function () {
+        return this.players_count;
+    },
+    isOnline:           function () {
+        return this.is_online;
+    },
+    parse:              function (data) {
+        
+    },
+}
+
+var components = [EveApiService, EveServerStatus];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
 
 function performRequest(data, url, process) {
-    var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
-            .createInstance(Ci.nsIXMLHttpRequest);
+    var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
+            createInstance(Ci.nsIXMLHttpRequest);
     req.open('POST', EVEAPIURL+EVEURLS[url], false);
     req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
     req.send(data);
@@ -66,8 +88,8 @@ function performRequest(data, url, process) {
 function evaluateXPath(aNode, aExpr) {
     var found = [];
     var res;
-    var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"]
-            .createInstance(Ci.nsIDOMXPathEvaluator);
+    var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"].
+            createInstance(Ci.nsIDOMXPathEvaluator);
     var nsResolver = xpe.createNSResolver(aNode.ownerDocument == null
             ? aNode.documentElement
             : aNode.ownerDocument.documentElement);

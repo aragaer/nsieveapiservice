@@ -1,9 +1,16 @@
 #include "nsISupports.idl"
-#include "nsIDOMElement.idl"
+interface nsIDOMElement;
+interface nsIEveServerStatus;
 
 [scriptable, uuid(6f7ee12b-12b3-4101-a4c9-ecdc97c51421)]
 interface nsIEveApiService : nsISupports {
-	nsIDOMElement getServerStatus();
-	nsIDOMElement getCharacterList(in string id, in string key);
-	nsIDOMElement getCharacterSkills(in string id, in string key, in string charID);
+    nsIEveServerStatus getServerStatus();
+    nsIDOMElement getCharacterList(in string id, in string key);
+    nsIDOMElement getCharacterSkills(in string id, in string key, in string charID);
 };
+
+[scriptable, uuid(b0274794-98da-45fd-8cf1-361cac351395)]
+interface nsIEveServerStatus : nsISupports {
+    boolean isOnline();
+    readonly attribute long onlinePlayers;
+}
