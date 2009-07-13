@@ -4,6 +4,7 @@ interface nsIEveServerStatus;
 
 [scriptable, uuid(6f7ee12b-12b3-4101-a4c9-ecdc97c51421)]
 interface nsIEveApiService : nsISupports {
+    void init();
     nsIEveServerStatus getServerStatus();
     nsIDOMElement getCharacterList(in string id, in string key);
     nsIDOMElement getCharacterSkills(in string id, in string key, in string charID);

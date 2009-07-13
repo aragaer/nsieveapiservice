@@ -6,9 +6,18 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
-    serverStatus:   "/server/ServerStatus.xml.aspx",
-    characters:     "/account/Characters.xml.aspx",
-    charsheet:      "/char/CharacterSheet.xml.aspx",
+    serverStatus:   {
+        url:    "/server/ServerStatus.xml.aspx",
+        cb:     processStatus,
+    },
+    characters:     {
+        url:    "/account/Characters.xml.aspx",
+        cb:     processCharacters,
+    },
+    charsheet:      {
+        url:    "/char/CharacterSheet.xml.aspx",
+        cb:     processCharsheet,
+    },
 };
 
 function EveApiService() { }
@@ -22,25 +31,70 @@ EveApiService.prototype = {
         category: "xpcom-startup",
         service: true
     }],
+
+    init:               function () {
+        this.cacheDir = Cc["@mozilla.org/file/directory_service;1"].
+                getService[Ci.nsIProperties].get("ProfD", Ci.nsIFile);
+        this.cacheDir.append("cache");
+
+        if (!this.cacheDir.exists())
+            file.create(Ci.nsIFile.DIRECTORY_TYPE, 0777);
+    },
     
     getServerStatus:    function () {
-        return performRequest(null, 'serverStatus')
+        return performRequest('serverStatus')
     },
     
     getCharacterList:   function (id, key) {
-        return performRequest('userID='+escape(id)+'&apiKey='+escape(key),
-                'characters', function (req) {
-                    return evaluateXPath(req.responseXML, "//rowset")[0];
-                });
+        return this._performRequest('characters', {userID: id, apiKey: key});
     },
 
     getCharacterSkills: function (id, key, charID) {
-        return performRequest('userID='+escape(id)+'&apiKey='+escape(key)+
-                    '&characterID='+escape(charID),
-                'charsheet', function (req) {
-                    return evaluateXPath(req.responseXML, "//rowset")[0];
-                });
-    }
+        return performRequest('charsheet',
+                {userID: id, apiKey: key, characterID: charID});
+    },
+
+    _makeHash:          function (st) {
+        var converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"].
+                createInstance[Ci.nsIScriptableUnicodeConverter];
+        converter.charset = "UTF-8";
+        var result = {};
+        // data is an array of bytes
+        var data = converter.convertToByteArray(str, result);
+        var hasher = Cc["@mozilla.org/security/hash;1"].
+                createInstance(Ci.nsICryptoHash);
+        hasher.init(ch.MD5);
+        hasher.update(data, data.length);
+        return hasher.finish(true);
+    },
+
+    _performRequest:    function (type, data) {
+        var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
+                createInstance(Ci.nsIXMLHttpRequest);
+
+        var postdata = [];
+        for (i in data)
+            postdata.push(i+'='+escape(data[i]));
+
+        var poststring = postdata.join('&');
+
+        var datastring = EVEURLS[type].url + '?' + poststring;
+        var hash = this._makeHash(datastring);
+        var file = this.cacheDir;
+        file.append(hash+'.xml');
+
+        req.open('POST', EVEAPIURL+EVEURLS[url], false);
+        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        req.send(data);
+        if (req.status != 200) {
+            dump('Failed to connect to server!\n');
+            return nsnull;
+        }
+
+        return process
+            ? callback(req)
+            : evaluateXPath(req.responseXML, "//rowset")[0];
+    },
 };
 
 function EveServerStatus() {
@@ -69,21 +123,7 @@ function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
 
-function performRequest(data, url, process) {
-    var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
-            createInstance(Ci.nsIXMLHttpRequest);
-    req.open('POST', EVEAPIURL+EVEURLS[url], false);
-    req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-    req.send(data);
-    if (req.status != 200) {
-        dump('Failed to connect to server!\n');
-        return nsnull;
-    }
 
-    return process
-        ? process(req)
-        : evaluateXPath(req.responseXML, "//rowset")[0];
-}
 
 function evaluateXPath(aNode, aExpr) {
     var found = [];
