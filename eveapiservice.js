@@ -20,7 +20,11 @@ const EVEURLS = {
     },
 };
 
-function EveApiService() { }
+function EveApiService() {
+    this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
+            getService(Ci.nsICacheService).createSession("HTTP",
+                    Ci.nsICache.STORE_OFFLINE, true);
+}
 
 EveApiService.prototype = {
     classDescription: "EVE API XPCOM Component",
@@ -32,17 +36,8 @@ EveApiService.prototype = {
         service: true
     }],
 
-    init:               function () {
-        this.cacheDir = Cc["@mozilla.org/file/directory_service;1"].
-                getService[Ci.nsIProperties].get("ProfD", Ci.nsIFile);
-        this.cacheDir.append("cache");
-
-        if (!this.cacheDir.exists())
-            file.create(Ci.nsIFile.DIRECTORY_TYPE, 0777);
-    },
-    
     getServerStatus:    function () {
-        return performRequest('serverStatus')
+        return this._performRequest('serverStatus');
     },
     
     getCharacterList:   function (id, key) {
@@ -54,46 +49,50 @@ EveApiService.prototype = {
                 {userID: id, apiKey: key, characterID: charID});
     },
 
-    _makeHash:          function (st) {
+    _makeHash:          function (str) {
         var converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"].
-                createInstance[Ci.nsIScriptableUnicodeConverter];
+                createInstance(Ci.nsIScriptableUnicodeConverter);
         converter.charset = "UTF-8";
         var result = {};
         // data is an array of bytes
         var data = converter.convertToByteArray(str, result);
         var hasher = Cc["@mozilla.org/security/hash;1"].
                 createInstance(Ci.nsICryptoHash);
-        hasher.init(ch.MD5);
+        hasher.init(hasher.MD5);
         hasher.update(data, data.length);
-        return hasher.finish(true);
+        var hash = hasher.finish(false);
+        function toHexString(c) { return ("00" + c.toString(16)).slice(-2); }
+        return [toHexString(hash.charCodeAt(i)) for (i in hash)].join("");
     },
 
     _performRequest:    function (type, data) {
         var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
                 createInstance(Ci.nsIXMLHttpRequest);
 
-        var postdata = [];
-        for (i in data)
-            postdata.push(i+'='+escape(data[i]));
+        var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
+        var url = EVEAPIURL+EVEURLS[type].url +
+            (data 
+                ? '?stamp=' + this._makeHash(poststring)
+                : ""
+            );
 
-        var poststring = postdata.join('&');
-
-        var datastring = EVEURLS[type].url + '?' + poststring;
-        var hash = this._makeHash(datastring);
-        var file = this.cacheDir;
-        file.append(hash+'.xml');
-
-        req.open('POST', EVEAPIURL+EVEURLS[url], false);
+        req.open('POST', url, false);
         req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        req.send(data);
+        req.send(poststring);
         if (req.status != 200) {
             dump('Failed to connect to server!\n');
             return nsnull;
         }
 
-        return process
-            ? callback(req)
-            : evaluateXPath(req.responseXML, "//rowset")[0];
+        var cache_descr = this.cache_session.openCacheEntry(url,
+                Ci.nsICache.ACCESS_WRITE, true);
+
+        var cached_until = evaluateXPath(req.responseXML, "/eveapi/cachedUntil/text()")[0].data;
+        var d = cached_until.split(/ |:|-/); // 2009-07-18 22:54:58
+        cache_descr.setExpirationTime(Date.UTC(d[0], d[1], d[2], d[3], d[4], d[5])/1000);
+        cache_descr.storagePolicy = Ci.nsICache.STORE_OFFLINE;
+
+        return EVEURLS[type].cb(req);
     },
 };
 
@@ -107,7 +106,7 @@ EveServerStatus.prototype = {
     classID:            Components.ID("{b0274794-98da-45fd-8cf1-361cac351395}"),
     contractID:         "@aragaer.com/eve-server-status;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveServerStatus]),
-    get onlinePlayers:  function () {
+    get onlinePlayers() {
         return this.players_count;
     },
     isOnline:           function () {
@@ -122,8 +121,6 @@ var components = [EveApiService, EveServerStatus];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
-
-
 
 function evaluateXPath(aNode, aExpr) {
     var found = [];
@@ -143,5 +140,14 @@ function evaluateXPath(aNode, aExpr) {
     while (res = result.iterateNext())
         found.push(res);
     return found;
+}
+
+function processStatus(data) {
+}
+
+function processCharacters(data) {
+}
+
+function processCharsheet(data) {
 }
 
