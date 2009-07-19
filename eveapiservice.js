@@ -1,5 +1,6 @@
 const Cc = Components.classes;
 const Ci = Components.interfaces;
+const IOService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
@@ -22,7 +23,7 @@ const EVEURLS = {
 
 function EveApiService() {
     this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
-            getService(Ci.nsICacheService).createSession("HTTP",
+            getService(Ci.nsICacheService).createSession("EVE API",
                     Ci.nsICache.STORE_OFFLINE, true);
 }
 
@@ -66,33 +67,55 @@ EveApiService.prototype = {
     },
 
     _performRequest:    function (type, data) {
-        var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
-                createInstance(Ci.nsIXMLHttpRequest);
-
         var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
-        var url = EVEAPIURL+EVEURLS[type].url +
-            (data 
-                ? '?stamp=' + this._makeHash(poststring)
-                : ""
-            );
+        var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, poststring);
+        return res
+            ? EVEURLS[type].cb()
+            : null;
+    },
 
-        req.open('POST', url, false);
-        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        req.send(poststring);
-        if (req.status != 200) {
-            dump('Failed to connect to server!\n');
-            return nsnull;
+    _fetchXML:    function (url, data) {
+        var result;
+        var cacheKey = url + '?stamp=' + this._makeHash(data);
+        var cd = this.cache_session.openCacheEntry(cacheKey, Ci.nsICache.ACCESS_READ_WRITE, true);
+        if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE   // It exists
+                &&  cd.expirationTime*1000 > Date.now()) {      // And it is valid
+            dump("Using cache now\n");
+            var stream = cd.openInputStream(0);
+            var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
+                    createInstance(Ci.nsIDOMParser);
+            result = parser.parseFromStream(stream, "UTF-8",
+                    stream.available(), "text/xml");
+            stream.close();
+            cd.close();
+            return result;
         }
 
-        var cache_descr = this.cache_session.openCacheEntry(url,
-                Ci.nsICache.ACCESS_WRITE, true);
+        var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
+                createInstance(Ci.nsIXMLHttpRequest);
+        req.open('POST', url, false);
+        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        req.send(data);
+        if (req.status != 200) {
+            dump('Failed to connect to server!\n');
+            return null;
+        }
 
-        var cached_until = evaluateXPath(req.responseXML, "/eveapi/cachedUntil/text()")[0].data;
-        var d = cached_until.split(/ |:|-/); // 2009-07-18 22:54:58
-        cache_descr.setExpirationTime(Date.UTC(d[0], d[1], d[2], d[3], d[4], d[5])/1000);
-        cache_descr.storagePolicy = Ci.nsICache.STORE_OFFLINE;
+        result = req.responseXML;
 
-        return EVEURLS[type].cb(req);
+        var serializer = Cc["@mozilla.org/xmlextras/xmlserializer;1"].
+            createInstance(Ci.nsIDOMSerializer);
+        serializer.serializeToStream(result, cd.openOutputStream(0), "");
+
+        var curtime = evaluateXPath(result, "/eveapi/currentTime/text()")[0].data;
+        var cached_until = evaluateXPath(result, "/eveapi/cachedUntil/text()")[0].data;
+        dump("Got on ["+curtime+"] expires on ["+cached_until+"]\n");
+        cd.setExpirationTime(Date.UTCFromEveTimeString(cached_until)/1000);
+        cd.markValid();
+        cd.close();
+        channel = null;
+
+        return result;
     },
 };
 
@@ -149,5 +172,12 @@ function processCharacters(data) {
 }
 
 function processCharsheet(data) {
+}
+
+Date.UTCFromEveTimeString = function (str) {
+    var d = str.split(/:| |-/);
+    d[1]--; // Month
+
+    return Date.UTC(d[0], d[1], d[2], d[3], d[4], d[5]);
 }
 
