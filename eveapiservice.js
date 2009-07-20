@@ -6,12 +6,25 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
-    serverStatus:   "/server/ServerStatus.xml.aspx",
-    characters:     "/account/Characters.xml.aspx",
-    charsheet:      "/char/CharacterSheet.xml.aspx",
+    serverStatus:   {
+        url:    "/server/ServerStatus.xml.aspx",
+        cb:     processStatus,
+    },
+    characters:     {
+        url:    "/account/Characters.xml.aspx",
+        cb:     processCharacters,
+    },
+    charsheet:      {
+        url:    "/char/CharacterSheet.xml.aspx",
+        cb:     processCharsheet,
+    },
 };
 
-function EveApiService() { }
+function EveApiService() {
+    this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
+            getService(Ci.nsICacheService).createSession("EVE API",
+                    Ci.nsICache.STORE_OFFLINE, true);
+}
 
 EveApiService.prototype = {
     classDescription: "EVE API XPCOM Component",
@@ -22,52 +35,100 @@ EveApiService.prototype = {
         category: "xpcom-startup",
         service: true
     }],
-    
+
     getServerStatus:    function () {
-        return performRequest(null, 'serverStatus')
+        return this._performRequest('serverStatus');
     },
     
     getCharacterList:   function (id, key) {
-        return performRequest('userID='+escape(id)+'&apiKey='+escape(key),
-                'characters', function (req) {
-                    return evaluateXPath(req.responseXML, "//rowset")[0];
-                });
+        return this._performRequest('characters', {userID: id, apiKey: key});
     },
 
     getCharacterSkills: function (id, key, charID) {
-        return performRequest('userID='+escape(id)+'&apiKey='+escape(key)+
-                    '&characterID='+escape(charID),
-                'charsheet', function (req) {
-                    return evaluateXPath(req.responseXML, "//rowset")[0];
-                });
-    }
+        return performRequest('charsheet',
+                {userID: id, apiKey: key, characterID: charID});
+    },
+
+    _makeHash:          function (str) {
+        var converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"].
+                createInstance(Ci.nsIScriptableUnicodeConverter);
+        converter.charset = "UTF-8";
+        var result = {};
+        // data is an array of bytes
+        var data = converter.convertToByteArray(str, result);
+        var hasher = Cc["@mozilla.org/security/hash;1"].
+                createInstance(Ci.nsICryptoHash);
+        hasher.init(hasher.MD5);
+        hasher.update(data, data.length);
+        var hash = hasher.finish(false);
+        function toHexString(c) { return ("00" + c.toString(16)).slice(-2); }
+        return [toHexString(hash.charCodeAt(i)) for (i in hash)].join("");
+    },
+
+    _performRequest:    function (type, data) {
+        var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
+        var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, poststring);
+        return res
+            ? EVEURLS[type].cb()
+            : null;
+    },
+
+    _fetchXML:    function (url, data) {
+        var result;
+        var cacheKey = url + '?stamp=' + this._makeHash(data);
+        var cd = this.cache_session.openCacheEntry(cacheKey, Ci.nsICache.ACCESS_READ_WRITE, true);
+        if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE   // It exists
+                &&  cd.expirationTime*1000 > Date.now()) {      // And it is valid
+            dump("Using cache now\n");
+            var stream = cd.openInputStream(0);
+            var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
+                    createInstance(Ci.nsIDOMParser);
+            result = parser.parseFromStream(stream, "UTF-8",
+                    stream.available(), "text/xml");
+            stream.close();
+            cd.close();
+            return result;
+        }
+
+        var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
+                createInstance(Ci.nsIXMLHttpRequest);
+        req.open('POST', url, false);
+        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        req.send(data);
+        if (req.status != 200) {
+            dump('Failed to connect to server!\n');
+            return null;
+        }
+
+        result = req.responseXML;
+
+        var serializer = Cc["@mozilla.org/xmlextras/xmlserializer;1"].
+            createInstance(Ci.nsIDOMSerializer);
+        var os = cd.openOutputStream(0);
+        serializer.serializeToStream(result, os, "");
+        os.close();
+
+        var curtime = evaluateXPath(result, "/eveapi/currentTime/text()")[0].data;
+        var cached_until = evaluateXPath(result, "/eveapi/cachedUntil/text()")[0].data;
+        dump("Got on ["+curtime+"] expires on ["+cached_until+"]\n");
+        cd.setExpirationTime(Date.UTCFromEveTimeString(cached_until)/1000);
+        cd.markValid();
+        cd.close();
+        channel = null;
+
+        return result;
+    },
 };
 var components = [EveApiService];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
 
-function performRequest(data, url, process) {
-    var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
-            .createInstance(Ci.nsIXMLHttpRequest);
-    req.open('POST', EVEAPIURL+EVEURLS[url], false);
-    req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-    req.send(data);
-    if (req.status != 200) {
-        dump('Failed to connect to server!\n');
-        return nsnull;
-    }
-
-    return process
-        ? process(req)
-        : evaluateXPath(req.responseXML, "//rowset")[0];
-}
-
 function evaluateXPath(aNode, aExpr) {
     var found = [];
     var res;
-    var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"]
-            .createInstance(Ci.nsIDOMXPathEvaluator);
+    var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"].
+            createInstance(Ci.nsIDOMXPathEvaluator);
     var nsResolver = xpe.createNSResolver(aNode.ownerDocument == null
             ? aNode.documentElement
             : aNode.ownerDocument.documentElement);
@@ -81,5 +142,21 @@ function evaluateXPath(aNode, aExpr) {
     while (res = result.iterateNext())
         found.push(res);
     return found;
+}
+
+function processStatus(data) {
+}
+
+function processCharacters(data) {
+}
+
+function processCharsheet(data) {
+}
+
+Date.UTCFromEveTimeString = function (str) {
+    var d = str.split(/:| |-/);
+    d[1]--; // Month
+
+    return Date.UTC(d[0], d[1], d[2], d[3], d[4], d[5]);
 }
 
