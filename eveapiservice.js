@@ -3,6 +3,8 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
+const ItemBuilder = Cc["@aragaer/eve/item-builder;1"].
+        getService(Ci.nsIEveItemBuilder);
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
@@ -17,6 +19,10 @@ const EVEURLS = {
     charsheet:      {
         url:    "/char/CharacterSheet.xml.aspx",
         cb:     processCharsheet,
+    },
+    charassets:      {
+        url:    "/char/AssetList.xml.aspx",
+        cb:     processCharassets,
     },
 };
 
@@ -47,6 +53,13 @@ EveApiService.prototype = {
     getCharacterSkills: function (id, key, charID) {
         return this._performRequest('charsheet',
                 {userID: id, apiKey: key, characterID: charID});
+    },
+
+    getCharacterAssets: function (id, key, charID, count) {
+        var result = this._performRequest('charassets',
+                {userID: id, apiKey: key, characterID: charID});
+        count.value = result.length;
+        return result;
     },
 
     _makeHash:          function (str) {
@@ -150,6 +163,23 @@ function processCharacters(data) {
 }
 
 function processCharsheet(data) {
+}
+
+function processCharassets(data) {
+    var rows = evaluateXPath(data, "//row");
+    dump("Found "+rows.length+" items\n");
+    return rows.map(function (item) {
+        return ItemBuilder.createItem(
+            item.getAttribute('itemID'),
+            item.hasAttribute('locationID')
+                ? item.getAttribute('locationID')
+                : item.parentNode.parentNode.getAttribute('itemID'),
+            item.getAttribute('typeID'),
+            item.getAttribute('quantity'),
+            item.getAttribute('flag'),
+            item.getAttribute('singleton')
+        );
+    });
 }
 
 Date.UTCFromEveTimeString = function (str) {
