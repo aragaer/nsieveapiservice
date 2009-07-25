@@ -45,7 +45,7 @@ EveApiService.prototype = {
     },
 
     getCharacterSkills: function (id, key, charID) {
-        return performRequest('charsheet',
+        return this._performRequest('charsheet',
                 {userID: id, apiKey: key, characterID: charID});
     },
 
@@ -69,7 +69,7 @@ EveApiService.prototype = {
         var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
         var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, poststring);
         return res
-            ? EVEURLS[type].cb()
+            ? EVEURLS[type].cb(res)
             : null;
     },
 
@@ -114,7 +114,6 @@ EveApiService.prototype = {
         cd.setExpirationTime(Date.UTCFromEveTimeString(cached_until)/1000);
         cd.markValid();
         cd.close();
-        channel = null;
 
         return result;
     },
