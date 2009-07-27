@@ -3,8 +3,7 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-const ItemBuilder = Cc["@aragaer/eve/item-builder;1"].
-        getService(Ci.nsIEveItemBuilder);
+var ItemBuilder;
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
@@ -167,6 +166,9 @@ function processCharsheet(data) {
 
 function processCharassets(data) {
     var rows = evaluateXPath(data, "//row");
+    if (!ItemBuilder)
+        ItemBuilder = Cc["@aragaer/eve/item-builder;1"].
+                getService(Ci.nsIEveItemBuilder);
     dump("Found "+rows.length+" items\n");
     return rows.map(function (item) {
         return ItemBuilder.createItem(
