@@ -1,0 +1,20 @@
+#include "nsISupports.idl"
+interface nsIEveSkill;
+
+[scriptable, uuid(9cae4d34-cad2-481d-a07c-f886373dc262)]
+interface nsIEveCharacter : nsISupports {
+    readonly attribute string name;
+    readonly attribute long account_id;
+    readonly attribute long character_id;
+    void getSkills(out unsigned long count,
+        [array, size_is(count), retval] out nsIEveSkill retv); 
+};
+
+[scriptable, uuid(ddb317f6-eb3b-4702-a4a9-6642fa85826a)]
+interface nsIEveSkill : nsISupports {
+    readonly attribute short rank;
+    readonly attribute short level;
+    readonly attribute long sp;
+    readonly attribute string name;
+};
+
