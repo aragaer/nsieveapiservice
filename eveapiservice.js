@@ -1,6 +1,5 @@
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-const IOService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
@@ -10,7 +9,7 @@ const EVEAPIURL = "http://api.eve-online.com";
 const EVEURLS = {
     serverStatus:   {
         url:    "/server/ServerStatus.xml.aspx",
-        cb:     processStatus,
+        cb:     EveServerStatus.fromXML,
     },
     characters:     {
         url:    "/account/Characters.xml.aspx",
@@ -133,25 +132,23 @@ EveApiService.prototype = {
     },
 };
 
-function EveServerStatus() {
-    this.is_online = false;
-    this.players = 0;
+function EveServerStatus(online, players) {
+    this.is_online = online;
+    this.players_count = players;
 }
+
+EveServerStatus.fromXML = function (data) {
+    players = evaluateXPath(data, "//onlinePlayers/text()")[0].data;
+    return new EveServerStatus(players > 0, players);
+};
 
 EveServerStatus.prototype = {
     classDescription:   "EVE Online Server Status",
     classID:            Components.ID("{b0274794-98da-45fd-8cf1-361cac351395}"),
     contractID:         "@aragaer.com/eve-server-status;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveServerStatus]),
-    get onlinePlayers() {
-        return this.players_count;
-    },
-    isOnline:           function () {
-        return this.is_online;
-    },
-    parse:              function (data) {
-        
-    },
+    get onlinePlayers   this.players_count,
+    isOnline:           function () { return this.is_online; },
 }
 
 var components = [EveApiService, EveServerStatus];
@@ -161,14 +158,14 @@ function NSGetModule(compMgr, fileSpec) {
 
 function evaluateXPath(aNode, aExpr) {
     var found = [];
-    var res;
+    var res, result;
     var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"].
             createInstance(Ci.nsIDOMXPathEvaluator);
     var nsResolver = xpe.createNSResolver(aNode.ownerDocument == null
             ? aNode.documentElement
             : aNode.ownerDocument.documentElement);
     try {
-        var result = xpe.evaluate(aExpr, aNode, nsResolver, 0, null);
+        result = xpe.evaluate(aExpr, aNode, nsResolver, 0, null);
     } catch (e) {
         dump("error running xpe with expression '"+aExpr+"'\nCaller:"+
               evaluateXPath.caller+"\n");
@@ -179,14 +176,8 @@ function evaluateXPath(aNode, aExpr) {
     return found;
 }
 
-function processStatus(data) {
-}
-
-function processCharacters(data) {
-}
-
-function processCharsheet(data) {
-}
+function processCharacters(data) { }
+function processCharsheet(data) { }
 
 function processCharassets(data) {
     var rows = evaluateXPath(data, "//row");
