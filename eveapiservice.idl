@@ -1,4 +1,6 @@
 #include "nsISupports.idl"
+#include "nsIEveItem.idl"
+#include "nsIEveSkill.idl"
 interface nsIDOMElement;
 interface nsIEveServerStatus;
 
@@ -7,9 +9,11 @@ interface nsIEveApiService : nsISupports {
     nsIEveServerStatus getServerStatus();
     nsIDOMElement getCharacterList(in string id, in string key);
     nsIDOMElement getCharacterSkills(in string id, in string key, in string charID);
-	void getCharacterAssets(in string id, in string key, in string charID,
-                out unsigned long count,
-                [array, size_is(count), retval] out nsIEveItem retv);
+    void getCharacterAssets(in string id, in string key, in string charID,
+            out unsigned long count,
+            [array, size_is(count), retval] out nsIEveItem retv);
+    void getCharacterSkills(in string id, in string key, in string charID,
+            out unsigned long count, [array, size_is(count), retval] out nsIEveSkill retv);
 };
 
 [scriptable, uuid(b0274794-98da-45fd-8cf1-361cac351395)]
