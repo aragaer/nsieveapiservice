@@ -147,7 +147,7 @@ EveServerStatus.prototype = {
     classID:            Components.ID("{b0274794-98da-45fd-8cf1-361cac351395}"),
     contractID:         "@aragaer.com/eve-server-status;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveServerStatus]),
-    get onlinePlayers   this.players_count,
+    get onlinePlayers() this.players_count,
     isOnline:           function () { return this.is_online; },
 }
 
@@ -176,8 +176,11 @@ function evaluateXPath(aNode, aExpr) {
     return found;
 }
 
-function processCharacters(data) { }
-function processCharsheet(data) { }
+function processCharacters(data) {
+    dump("STUB processCharacters\n");
+    return evaluateXPath(data, "/eveapi/result/rowset")[0];
+}
+function processCharsheet(data) { return data; }
 
 function processCharassets(data) {
     var rows = evaluateXPath(data, "//row");
