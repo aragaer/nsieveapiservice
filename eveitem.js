@@ -29,7 +29,7 @@ eveitem.prototype = {
     },
     containerString:     function () {
         return this._container
-            ? EveDBService.getItemNameByType(this._container)
+            ? this._container.toString()
             : '';
     },
 

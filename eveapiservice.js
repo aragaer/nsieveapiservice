@@ -183,20 +183,16 @@ function processCharacters(data) {
 function processCharsheet(data) { return data; }
 
 function processCharassets(data) {
-    var rows = evaluateXPath(data, "//row");
     if (!ItemBuilder)
         ItemBuilder = Cc["@aragaer/eve/item-builder;1"].
                 getService(Ci.nsIEveItemBuilder);
-    dump("Found "+rows.length+" items\n");
-    return rows.map(function (item) {
-        return ItemBuilder.createItem(
+    var result = [];
+    evaluateXPath(data, "/eveapi/result/rowset/row").forEach(function (item) {
+        var loc = item.getAttribute('locationID');
+        var cont = ItemBuilder.createItem(
             item.getAttribute('itemID'),
-            item.hasAttribute('locationID')
-                ? item.getAttribute('locationID')
-                : 0,
-            item.hasAttribute('locationID')
-                ? 0
-                : item.parentNode.parentNode.getAttribute('typeID'),
+            loc,
+            null,
             item.getAttribute('typeID'),
             item.hasAttribute('quantity')
                 ? item.getAttribute('quantity')
@@ -208,7 +204,26 @@ function processCharassets(data) {
                 ? item.getAttribute('singleton')
                 : 0
         );
+        result.push(cont);
+        evaluateXPath(item, "rowset/row").forEach(function (child) {
+            result.push(ItemBuilder.createItem(
+                child.getAttribute('itemID'),
+                loc,
+                cont,
+                child.getAttribute('typeID'),
+                child.hasAttribute('quantity')
+                    ? child.getAttribute('quantity')
+                    : 1,
+                child.hasAttribute('flag')
+                    ? child.getAttribute('flag')
+                    : 0,
+                child.hasAttribute('singleton')
+                    ? child.getAttribute('singleton')
+                    : 0
+            ));
+        });
     });
+    return result;
 }
 
 Date.UTCFromEveTimeString = function (str) {

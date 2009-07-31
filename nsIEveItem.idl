@@ -4,7 +4,7 @@
 interface nsIEveItem : nsISupports {
     readonly attribute long id;
     readonly attribute long location;
-    readonly attribute long container;
+    readonly attribute nsIEveItem container;
     readonly attribute long type;
     readonly attribute long quantity;
     readonly attribute short flag;
@@ -16,7 +16,7 @@ interface nsIEveItem : nsISupports {
 
 [scriptable, uuid(711dae78-b38a-40a7-93d5-acbc3bc9d51a)]
 interface nsIEveItemBuilder : nsISupports {
-    void createItem(in long id, in long location, in long container,
+    void createItem(in long id, in long location, in nsIEveItem container,
             in long type, in long quantity, in short flag,
             in boolean singleton, [retval] out nsIEveItem item);
 };
