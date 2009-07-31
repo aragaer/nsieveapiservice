@@ -3,6 +3,8 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
+var EveDBService;
+
 function eveitem(id, location, type, quantity, flag, singleton) {
     this._id = id;
     this._location = location;
@@ -18,8 +20,15 @@ eveitem.prototype = {
     contractID:         "@aragaer/eve/item;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItem]),
 
-    get id() { return this._id },
-    get type() { return this._type },
+    toString:           function () {
+        return EveDBService.getItemNameByType(this._type);
+    },
+    get id()        this._id,
+    get location()  this._location,
+    get type()      this._type,
+    get quantity()  this._quantity,
+    get flag()      this._flag,
+    get singleton() this._singleton,
 };
 
 function itembuilder() { }
@@ -29,11 +38,22 @@ itembuilder.prototype = {
     classID:            Components.ID("{e5dc59a4-217e-46da-8c9f-d6de36df2d3f}"),
     contractID:         "@aragaer/eve/item-builder;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemBuilder]),
-    _xpcom_categories: [{
-        category: "xpcom-startup",
+    _xpcom_factory:     {
+        createInstance:     function (outer, iid) {
+            if (outer)
+                throw Components.results.NS_ERROR_NO_AGGREGATION;
+            if (!EveDBService)
+                EveDBService = Cc["@aragaer/eve/db;1"].
+                        getService(Ci.nsIEveDBService);
+            return (new itembuilder()).QueryInterface(iid);
+        },
+    },
+    _xpcom_categories:  [{
+        category: "profile-do-change",
         service: true
     }],
 
+/* Item Builder */
     createItem:     function (id, location, type, quantity, flag, singleton) {
         return new eveitem(id, location, type, quantity, flag, singleton);
     }

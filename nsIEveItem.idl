@@ -8,6 +8,7 @@ interface nsIEveItem : nsISupports {
     readonly attribute long quantity;
     readonly attribute short flag;
     readonly attribute boolean singleton;
+    string toString();
 };
 
 [scriptable, uuid(711dae78-b38a-40a7-93d5-acbc3bc9d51a)]
