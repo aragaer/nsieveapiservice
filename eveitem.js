@@ -5,9 +5,10 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 var EveDBService;
 
-function eveitem(id, location, type, quantity, flag, singleton) {
+function eveitem(id, location, container, type, quantity, flag, singleton) {
     this._id = id;
     this._location = location;
+    this._container = container;
     this._type = type;
     this._quantity = quantity;
     this._flag = flag;
@@ -23,8 +24,18 @@ eveitem.prototype = {
     toString:           function () {
         return EveDBService.getItemNameByType(this._type);
     },
+    locationString:     function () {
+        return EveDBService.locationToString(this._location);
+    },
+    containerString:     function () {
+        return this._container
+            ? EveDBService.getItemNameByType(this._container)
+            : '';
+    },
+
     get id()        this._id,
     get location()  this._location,
+    get container() this._container,
     get type()      this._type,
     get quantity()  this._quantity,
     get flag()      this._flag,
@@ -54,8 +65,8 @@ itembuilder.prototype = {
     }],
 
 /* Item Builder */
-    createItem:     function (id, location, type, quantity, flag, singleton) {
-        return new eveitem(id, location, type, quantity, flag, singleton);
+    createItem:     function (id, location, container, type, quantity, flag, singleton) {
+        return new eveitem(id, location, container, type, quantity, flag, singleton);
     }
 }
 

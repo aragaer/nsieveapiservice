@@ -193,11 +193,20 @@ function processCharassets(data) {
             item.getAttribute('itemID'),
             item.hasAttribute('locationID')
                 ? item.getAttribute('locationID')
-                : item.parentNode.parentNode.getAttribute('itemID'),
+                : 0,
+            item.hasAttribute('locationID')
+                ? 0
+                : item.parentNode.parentNode.getAttribute('typeID'),
             item.getAttribute('typeID'),
-            item.getAttribute('quantity'),
-            item.getAttribute('flag'),
-            item.getAttribute('singleton')
+            item.hasAttribute('quantity')
+                ? item.getAttribute('quantity')
+                : 1,
+            item.hasAttribute('flag')
+                ? item.getAttribute('flag')
+                : 0,
+            item.hasAttribute('singleton')
+                ? item.getAttribute('singleton')
+                : 0
         );
     });
 }

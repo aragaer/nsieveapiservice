@@ -61,6 +61,28 @@ dbwrapper.prototype = {
     getItemNameByType:  function (typeID) {
         return this._doSelectQuery("select typeName from invTypes where typeID='"+typeID+"';", null, true);
     },
+
+    locationToString:   function (locationID) {
+        switch (true) {
+        case locationID == 0:
+            return "";
+        case locationID >= 66000000 && locationID < 67000000:
+            locationId -= 6000001;
+        case locationID >= 60000000 && locationID <= 61000000:
+            return this._doSelectQuery("select stationName " +
+                    "from staStations where stationID='"+locationID+"';", null, true);
+
+        case locationID >= 67000000 && locationID < 68000000:
+            locationID -= 6000000;
+        case locationID >= 60014860 && locatioID <= 60014929:
+        case locationID >= 61000000:
+            return "Some conquerable outpost";
+
+        default:
+            return this._doSelectQuery("select solarSystemName from "+
+                    " mapSolarSystems where solarSystemID='"+locationID+"';");
+        };
+    },
 }
 
 var components = [dbwrapper];
