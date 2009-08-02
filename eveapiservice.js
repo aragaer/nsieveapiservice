@@ -227,7 +227,7 @@ function processCharassets(data) {
         );
         result.push(cont);
         evaluateXPath(item, "rowset/row").forEach(function (child) {
-            result.push(ItemBuilder.createItem(
+            cont.addItem(ItemBuilder.createItem(
                 child.getAttribute('itemID'),
                 loc,
                 cont,

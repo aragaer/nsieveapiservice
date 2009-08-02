@@ -1,0 +1,17 @@
+#include "nsISupports.idl"
+
+typedef short nsEveLocationTypeValue;
+
+[scriptable, uuid(4cc443f1-538e-4a0d-be4d-bde2df2e6866)]
+interface nsEveLocationType {
+    const nsEveLocationTypeValue LOCATION_OFFICE = 1;
+    const nsEveLocationTypeValue LOCATION_HANGAR = 2;
+    const nsEveLocationTypeValue LOCATION_SYSTEM = 3;
+};
+
+[scriptable, uuid(557932e0-d69e-4d4f-a322-f93d1d4b06ac)]
+interface nsIEveLocation : nsISupports {
+    readonly attribute nsEveLocationType type; 
+    readonly attribute long id;
+    readonly attribute string name;    
+};

@@ -23,6 +23,11 @@ function dbwrapper() {
     this.conn.executeSimpleSQL("PRAGMA temp_store = MEMORY");
 }
 
+function iteminfo(name, group) {
+    this._name = name;
+    this._group = group;
+}
+
 dbwrapper.prototype = {
     classDescription:   "EVE Online static dump",
     classID:            Components.ID("{66575bef-61c0-4ea3-9c34-17c10870e6a9}"),
@@ -83,9 +88,25 @@ dbwrapper.prototype = {
                     " mapSolarSystems where solarSystemID='"+locationID+"';", null, true);
         };
     },
-}
 
-var components = [dbwrapper];
+    getItemTypeInfo:    function(typeID) {
+        var res = this._doSelectQuery("select typeName, groupID " +
+                "from invTypes where typeID='"+typeID+"';", null, true)[0];
+        return new iteminfo(res[0], res[1]);
+    },
+};
+
+iteminfo.prototype = {
+    classDescription:   "EVE Online Item type info",
+    classID:            Components.ID("{97c4b53a-58c0-454c-af6e-38f86f93cc33}"),
+    contractID:         "@aragaer/eve/item-info;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemInfo]),
+    
+    get name()      this._name,
+    get group()   this._group,
+};
+
+var components = [dbwrapper, iteminfo];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

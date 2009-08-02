@@ -4,6 +4,26 @@ const Ci = Components.interfaces;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 var EveDBService;
+const PreloadedItems = {};
+
+function eveitemtype(typeid) {
+    this._id = typeid;
+    var data = EveDBService.getItemTypeInfo(typeid);
+
+    this._name = data.name;
+    this._group = data.group;
+}
+
+eveitemtype.prototype = {
+    classDescription:   "EVE item type",
+    classID:            Components.ID("{fb6bfcfe-5f16-4dc1-a78d-de5e4b766a26}"),
+    contractID:         "@aragaer/eve/item-type;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemType]),
+
+    get id()            this._id,
+    get name()          this._name,
+    get group()         this._group,
+};
 
 function eveitem(id, location, container, type, quantity, flag, singleton) {
     this._id = id;
@@ -13,6 +33,7 @@ function eveitem(id, location, container, type, quantity, flag, singleton) {
     this._quantity = quantity;
     this._flag = flag;
     this._singleton = singleton;
+    this._childs = null;
 }
 
 eveitem.prototype = {
@@ -22,12 +43,12 @@ eveitem.prototype = {
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItem]),
 
     toString:           function () {
-        return EveDBService.getItemNameByType(this._type);
+        return this.type.name;
     },
     locationString:     function () {
         return EveDBService.locationToString(this._location);
     },
-    containerString:     function () {
+    containerString:    function () {
         return this._container
             ? this._container.toString()
             : '';
@@ -40,6 +61,29 @@ eveitem.prototype = {
     get quantity()  this._quantity,
     get flag()      this._flag,
     get singleton() this._singleton,
+
+    isContainer:        function () {
+        return this._childs ? true : false;
+    },
+
+    getItemsInside:     function (out) {
+        if (!this._childs)
+            return null;
+        var result = [i for each (i in this._childs)];
+        out.value = result.length;
+        return result;
+    },
+
+    addItem:            function (itm) {
+        if (!this._childs)
+            this._childs = [];
+        if (!this._childs['itm' + itm.id])
+            this._childs['itm' + itm.id] = itm;
+    },
+
+    removeItem:         function (itm) {
+        this._childs.delete('itm' + itm.id);
+    },
 };
 
 function itembuilder() { }
@@ -65,12 +109,20 @@ itembuilder.prototype = {
     }],
 
 /* Item Builder */
-    createItem:     function (id, location, container, type, quantity, flag, singleton) {
-        return new eveitem(id, location, container, type, quantity, flag, singleton);
+    createItemType:    function (typeID) {
+        if (!PreloadedItems['itm'+typeID])
+            PreloadedItems['itm'+typeID] = new eveitemtype(typeID);
+        return PreloadedItems['itm'+typeID];
+    },
+
+    createItem:     function (id, location, container, typeID, quantity, flag, singleton) {
+        var type = this.createItemType(typeID);
+        return new eveitem(id, location, container, type,
+                quantity, flag, singleton);
     }
 }
 
-var components = [eveitem, itembuilder];
+var components = [eveitemtype, eveitem, itembuilder];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
