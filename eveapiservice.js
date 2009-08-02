@@ -23,6 +23,10 @@ const EVEURLS = {
         url:    "/char/AssetList.xml.aspx",
         cb:     processCharassets,
     },
+    corpassets:      {
+        url:    "/corp/AssetList.xml.aspx",
+        cb:     processCharassets,
+    },
 };
 
 function EveApiService() {
@@ -61,6 +65,13 @@ EveApiService.prototype = {
         return result;
     },
 
+    getCorporationAssets: function (id, key, charID, count) {
+        var result = this._performRequest('corpassets',
+                {userID: id, apiKey: key, characterID: charID});
+        count.value = result.length;
+        return result;
+    },
+
     _makeHash:          function (str) {
         var converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"].
                 createInstance(Ci.nsIScriptableUnicodeConverter);
@@ -85,30 +96,41 @@ EveApiService.prototype = {
             : null;
     },
 
+    _fromCache:     function (cd) {
+        var stream = cd.openInputStream(0);
+        var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
+                createInstance(Ci.nsIDOMParser);
+        var result = parser.parseFromStream(stream, "UTF-8",
+                stream.available(), "text/xml");
+        stream.close();
+        cd.close();
+        return result;
+     },
+
     _fetchXML:    function (url, data) {
         var result;
         var cacheKey = url + '?stamp=' + this._makeHash(data);
+        dump("Fetching "+cacheKey+"\n");
         var cd = this.cache_session.openCacheEntry(cacheKey, Ci.nsICache.ACCESS_READ_WRITE, true);
         if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE   // It exists
                 &&  cd.expirationTime*1000 > Date.now()) {      // And it is valid
             dump("Using cache now\n");
-            var stream = cd.openInputStream(0);
-            var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
-                    createInstance(Ci.nsIDOMParser);
-            result = parser.parseFromStream(stream, "UTF-8",
-                    stream.available(), "text/xml");
-            stream.close();
-            cd.close();
-            return result;
+            return this._fromCache(cd);
         }
 
         var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
                 createInstance(Ci.nsIXMLHttpRequest);
         req.open('POST', url, false);
         req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        req.send(data);
+        try {
+            req.send(data);
+        } catch (e) {
+            req = {status: 0};
+        }
         if (req.status != 200) {
             dump('Failed to connect to server!\n');
+            if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE)
+                return this._fromCache(cd);
             return null;
         }
 
@@ -126,7 +148,6 @@ EveApiService.prototype = {
         cd.setExpirationTime(Date.UTCFromEveTimeString(cached_until)/1000);
         cd.markValid();
         cd.close();
-        channel = null;
 
         return result;
     },

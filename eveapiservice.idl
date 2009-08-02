@@ -11,6 +11,9 @@ interface nsIEveApiService : nsISupports {
     void getCharacterAssets(in string id, in string key, in string charID,
             out unsigned long count,
             [array, size_is(count), retval] out nsIEveItem retv);
+    void getCorporationAssets(in string id, in string key, in string charID,
+            out unsigned long count,
+            [array, size_is(count), retval] out nsIEveItem retv);
     void getCharacterSkills(in string id, in string key, in string charID,
             out unsigned long count, [array, size_is(count), retval] out nsIEveSkill retv);
 };

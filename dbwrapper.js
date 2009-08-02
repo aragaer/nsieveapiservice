@@ -67,7 +67,7 @@ dbwrapper.prototype = {
         case locationID == 0:
             return "";
         case locationID >= 66000000 && locationID < 67000000:
-            locationId -= 6000001;
+            locationID -= 6000001;
         case locationID >= 60000000 && locationID <= 61000000:
             return this._doSelectQuery("select stationName " +
                     "from staStations where stationID='"+locationID+"';", null, true);
@@ -80,7 +80,7 @@ dbwrapper.prototype = {
 
         default:
             return this._doSelectQuery("select solarSystemName from "+
-                    " mapSolarSystems where solarSystemID='"+locationID+"';");
+                    " mapSolarSystems where solarSystemID='"+locationID+"';", null, true);
         };
     },
 }
