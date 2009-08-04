@@ -4,14 +4,47 @@ const Ci = Components.interfaces;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 var EveDBService;
-const PreloadedItems = {};
+var EveItemBuilder;
+const PreloadedTypes = {};
+const PreloadedGroups = {};
+const PreloadedCategories = {};
+
+function eveitemcategory(catid) {
+    this._id = catid;
+    this._name = EveDBService.getItemCategoryNameByID(catid);
+}
+
+eveitemcategory.prototype = {
+    classDescription:   "EVE item category",
+    classID:            Components.ID("{ef3555fb-be5d-43c9-83ab-d3e8d5432f43}"),
+    contractID:         "@aragaer/eve/item-category;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemCategory]),
+
+    get id()            this._id,
+    get name()          this._name,
+};
+
+function eveitemgroup(groupid) {
+    this._id = groupid;
+    this._name = EveDBService.getItemGroupNameByID(groupid);
+    this._category = EveItemBuilder.getItemCategoryByGroup(groupid);
+}
+
+eveitemgroup.prototype = {
+    classDescription:   "EVE item group",
+    classID:            Components.ID("{5e922507-10b0-4fee-b8df-9f95df29a28a}"),
+    contractID:         "@aragaer/eve/item-group;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemGroup]),
+
+    get id()            this._id,
+    get name()          this._name,
+    get category()      this._category,
+};
 
 function eveitemtype(typeid) {
     this._id = typeid;
-    var data = EveDBService.getItemTypeInfo(typeid);
-
-    this._name = data.name;
-    this._group = data.group;
+    this._name = EveDBService.getItemTypeNameByID(typeid);
+    this._group = EveItemBuilder.getItemGroupByType(typeid);
 }
 
 eveitemtype.prototype = {
@@ -29,7 +62,7 @@ function eveitem(id, location, container, type, quantity, flag, singleton) {
     this._id = id;
     this._location = location;
     this._container = container;
-    this._type = type;
+    this._type = EveItemBuilder.getItemType(type);
     this._quantity = quantity;
     this._flag = flag;
     this._singleton = singleton;
@@ -108,21 +141,36 @@ itembuilder.prototype = {
         service: true
     }],
 
-/* Item Builder */
-    createItemType:    function (typeID) {
-        if (!PreloadedItems['itm'+typeID])
-            PreloadedItems['itm'+typeID] = new eveitemtype(typeID);
-        return PreloadedItems['itm'+typeID];
+    _getPreloaded:      function (storage, constructor) {
+        return function (id) {
+            if (!storage['itm' + id])
+                storage['itm' + id] = new constructor(id);
+            return storage['itm' + id];
+        }
     },
 
+    getItemGroupByType: function (type) {
+        return this.getItemGroup(EveDBService.getItemGroupByType(type));
+    },
+
+    getItemCategoryByGroup: function (group) {
+        return this.getItemCategory(EveDBService.getItemCategoryByGroup(group));
+    },
+
+/* Item Builder */
     createItem:     function (id, location, container, typeID, quantity, flag, singleton) {
-        var type = this.createItemType(typeID);
-        return new eveitem(id, location, container, type,
+        return new eveitem(id, location, container, typeID,
                 quantity, flag, singleton);
     }
-}
+};
 
-var components = [eveitemtype, eveitem, itembuilder];
+itembuilder.prototype.getItemCategory = itembuilder.prototype._getPreloaded(PreloadedCategories, eveitemcategory);
+itembuilder.prototype.getItemGroup = itembuilder.prototype._getPreloaded(PreloadedGroups, eveitemgroup);
+itembuilder.prototype.getItemType = itembuilder.prototype._getPreloaded(PreloadedTypes, eveitemtype);
+
+EveItemBuilder = itembuilder.prototype;
+
+var components = [eveitemcategory, eveitemgroup, eveitemtype, eveitem, itembuilder];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

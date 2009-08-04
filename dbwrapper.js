@@ -62,9 +62,12 @@ dbwrapper.prototype = {
         return rv;
     },
 
-
-    getItemNameByType:  function (typeID) {
-        return this._doSelectQuery("select typeName from invTypes where typeID='"+typeID+"';", null, true);
+    _getPropByProp:       function (prop1, prop2, table, nodump) {
+        var query1 = "select "+prop1+" from "+table+" where "+prop2+"='"
+        var query2 = "';";
+        return function (id) {
+            return this._doSelectQuery(query1+id+query2, null, nodump);
+        }
     },
 
     locationToString:   function (locationID) {
@@ -88,25 +91,14 @@ dbwrapper.prototype = {
                     " mapSolarSystems where solarSystemID='"+locationID+"';", null, true);
         };
     },
-
-    getItemTypeInfo:    function(typeID) {
-        var res = this._doSelectQuery("select typeName, groupID " +
-                "from invTypes where typeID='"+typeID+"';", null, true)[0];
-        return new iteminfo(res[0], res[1]);
-    },
 };
+dbwrapper.prototype.getItemTypeNameByID     = dbwrapper.prototype._getPropByProp('typeName', 'typeID', 'invTypes',              true);
+dbwrapper.prototype.getItemGroupNameByID    = dbwrapper.prototype._getPropByProp('groupName', 'groupID', 'invGroups',           true);
+dbwrapper.prototype.getItemCategoryNameByID = dbwrapper.prototype._getPropByProp('categoryName', 'categoryID', 'invCategories', true);
+dbwrapper.prototype.getItemGroupByType      = dbwrapper.prototype._getPropByProp('groupID', 'typeID', 'invTypes',               true);
+dbwrapper.prototype.getItemCategoryByGroup  = dbwrapper.prototype._getPropByProp('categoryID', 'groupID', 'invGroups',          true);
 
-iteminfo.prototype = {
-    classDescription:   "EVE Online Item type info",
-    classID:            Components.ID("{97c4b53a-58c0-454c-af6e-38f86f93cc33}"),
-    contractID:         "@aragaer/eve/item-info;1",
-    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemInfo]),
-    
-    get name()      this._name,
-    get group()   this._group,
-};
-
-var components = [dbwrapper, iteminfo];
+var components = [dbwrapper];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

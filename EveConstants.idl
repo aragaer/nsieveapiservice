@@ -1,0 +1,22 @@
+typedef short nsEveLocationTypeValue;
+
+[scriptable, uuid(4cc443f1-538e-4a0d-be4d-bde2df2e6866)]
+interface nsEveLocationType {
+    const nsEveLocationTypeValue LOCATION_OFFICE = 1;
+    const nsEveLocationTypeValue LOCATION_HANGAR = 2;
+    const nsEveLocationTypeValue LOCATION_SYSTEM = 3;
+};
+
+typedef long nsEveItemTypeIDValue;
+
+[scriptable, uuid(d1c2edf3-635c-460b-b020-b386841c528d)]
+interface nsEveItemTypeID {
+};
+
+typedef long nsEveITemGroupIDValue;
+
+[scriptable, uuid(8ff27734-8386-4c2d-a363-753eb98ad912)]
+interface nsEveItemGroupID {
+    const nsEveItemGroupIDValue GROUP_CONTROL_TOWER = 365;
+};
+

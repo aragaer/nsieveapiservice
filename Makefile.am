@@ -6,5 +6,6 @@ XPT_FILES=eveapiservice.xpt nsIEveItem.xpt nsIEveDBWrapper.xpt
 
 JS_FILES+=eveskill.js evelocation.js
 XPT_FILES+=nsIEveSkill.xpt nsIEveLocation.xpt
+XPT_FILES+=EveConstants.xpt
 comp_DATA=$(JS_FILES) $(XPT_FILES)
 pref_DATA=api_pref.js
