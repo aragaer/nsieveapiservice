@@ -2,6 +2,10 @@
 
 [scriptable, uuid(fa14b0c5-b121-4c22-9d4f-1f40999b9d86)]
 interface nsIEveDBService : nsISupports {
+    string getItemName(in long id);
+    void setItemName(in long id, in string name,
+        in long category, in long group, in long type);
+
     string locationToString(in long locationID);
     string getItemTypeNameByID(in long id);
     string getItemGroupNameByID(in long id);

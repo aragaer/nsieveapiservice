@@ -67,6 +67,7 @@ function eveitem(id, location, container, type, quantity, flag, singleton) {
     this._flag = flag;
     this._singleton = singleton;
     this._childs = null;
+    this._name = EveDBService.getItemName(id);
 }
 
 eveitem.prototype = {
@@ -94,6 +95,15 @@ eveitem.prototype = {
     get quantity()  this._quantity,
     get flag()      this._flag,
     get singleton() this._singleton,
+
+    get name()      this._name,
+    set name(name)  {
+        this._name = name;
+        EveDBService.setItemName(this._id, name,
+            this._type._group._category._id,
+            this._type._group._id,
+            this._type._id);
+    },
 
     isContainer:        function () {
         return this._childs ? true : false;

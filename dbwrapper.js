@@ -21,6 +21,32 @@ function dbwrapper() {
 
     this.conn.executeSimpleSQL("PRAGMA synchronous = OFF");
     this.conn.executeSimpleSQL("PRAGMA temp_store = MEMORY");
+
+    try {
+        var file = Cc["@mozilla.org/file/directory_service;1"].
+                getService(Ci.nsIProperties).get('ProfD', Ci.nsIFile);
+        file.append('data');
+        if (!file.exists())
+            file.create(file.DIRECTORY_TYPE, 0777);
+
+        file.append('api.db');
+        if (!file.exists())
+            file.create(file.NORMAL_FILE_TYPE, 0700);
+
+        this.conn.executeSimpleSQL("attach database '"+file.path+"' as local;");
+    } catch (e) {
+        dump(e.toString()+"\n");
+        return;
+    }
+
+    try {
+        this._doSelectQuery("select 1 from local.eveNames;");
+    } catch (e) {
+        dump(e.toString()+"\n");
+        this.conn.executeSimpleSQL("CREATE TABLE local.eveNames " +
+            "(itemID integer, itemName char, categoryID integer, " +
+            "groupID integer, typeID integer, primary key (itemID));");
+    }
 }
 
 function iteminfo(name, group) {
@@ -70,6 +96,11 @@ dbwrapper.prototype = {
         }
     },
 
+    setItemName:        function (id, name, category, group, type) {
+        this._executeSimpleSQL("replace into local.eveNames values " +
+            "('"+[id, name, category, group, type].join("', '")+"');");
+    },
+
     locationToString:   function (locationID) {
         switch (true) {
         case locationID == 0:
@@ -97,6 +128,7 @@ dbwrapper.prototype.getItemGroupNameByID    = dbwrapper.prototype._getPropByProp
 dbwrapper.prototype.getItemCategoryNameByID = dbwrapper.prototype._getPropByProp('categoryName', 'categoryID', 'invCategories', true);
 dbwrapper.prototype.getItemGroupByType      = dbwrapper.prototype._getPropByProp('groupID', 'typeID', 'invTypes',               true);
 dbwrapper.prototype.getItemCategoryByGroup  = dbwrapper.prototype._getPropByProp('categoryID', 'groupID', 'invGroups',          true);
+dbwrapper.prototype.getItemName             = dbwrapper.prototype._getPropByProp('itemName', 'itemID', 'local.eveNames',        true);
 
 var components = [dbwrapper];
 function NSGetModule(compMgr, fileSpec) {

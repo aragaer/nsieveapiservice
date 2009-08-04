@@ -30,6 +30,7 @@ interface nsIEveItem : nsISupports {
     readonly attribute long quantity;
     readonly attribute short flag;
     readonly attribute boolean singleton;
+    attribute string name;
     string toString();
     string locationString();
     string containerString();
