@@ -33,7 +33,7 @@ function dbwrapper() {
         if (!file.exists())
             file.create(file.NORMAL_FILE_TYPE, 0700);
 
-        this.conn.executeSimpleSQL("attach database '"+file.path+"' as local;");
+        this._executeSimpleSQL("attach database '"+file.path+"' as local;");
     } catch (e) {
         dump(e.toString()+"\n");
         return;
@@ -42,8 +42,7 @@ function dbwrapper() {
     try {
         this._doSelectQuery("select 1 from local.eveNames;");
     } catch (e) {
-        dump(e.toString()+"\n");
-        this.conn.executeSimpleSQL("CREATE TABLE local.eveNames " +
+        this._executeSimpleSQL("CREATE TABLE local.eveNames " +
             "(itemID integer, itemName char, categoryID integer, " +
             "groupID integer, typeID integer, primary key (itemID));");
     }
