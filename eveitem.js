@@ -152,9 +152,9 @@ function controltowertype() { }
 controltowertype.prototype = new eveitemtype();
 copyTo(controltowertype.prototype, {
     classDescription:   "EVE Control Tower",
-    classID:            Components.ID("{89a9aeb3-9f44-427d-bc4c-274dbef8d93f}");
+    classID:            Components.ID("{89a9aeb3-9f44-427d-bc4c-274dbef8d93f}"),
     contractID:         "@aragaer/eve/control-tower-type;1",
-    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemType, Ci.nsIEveControlTowerType]);
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemType, Ci.nsIEveControlTowerType]),
     getFuelRequirements:function (out) {
         return [];
     },
