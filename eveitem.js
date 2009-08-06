@@ -9,6 +9,11 @@ const PreloadedTypes = {};
 const PreloadedGroups = {};
 const PreloadedCategories = {};
 
+function copyTo(to, from) {
+    for (i in from)
+        to[i] = from[i];
+}
+
 function eveitemcategory(catid) {
     this._id = catid;
     this._name = EveDBService.getItemCategoryNameByID(catid);
@@ -129,6 +134,32 @@ eveitem.prototype = {
     },
 };
 
+function controltower() { }
+controltower.prototype = new eveitem();
+copyTo(controltower.prototype, {
+    classDescription:   "EVE Control Tower instance",
+    classID:            Components.ID("{cfa1e940-1ca1-42f4-98b5-109cdc438641}"),
+    contractID:         "@aragaer/eve/control-tower;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItem, Ci.nsIEveControlTower]),
+    getFuel:            function (out) {
+        var fuel = this.getItemsInside();
+        out.value = fuel.length;
+        return fuel;
+    },
+});
+
+function controltowertype() { }
+controltowertype.prototype = new eveitemtype();
+copyTo(controltowertype.prototype, {
+    classDescription:   "EVE Control Tower",
+    classID:            Components.ID("{89a9aeb3-9f44-427d-bc4c-274dbef8d93f}");
+    contractID:         "@aragaer/eve/control-tower-type;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemType, Ci.nsIEveControlTowerType]);
+    getFuelRequirements:function (out) {
+        return [];
+    },
+});
+
 function itembuilder() { }
 
 itembuilder.prototype = {
@@ -180,7 +211,8 @@ itembuilder.prototype.getItemType = itembuilder.prototype._getPreloaded(Preloade
 
 EveItemBuilder = itembuilder.prototype;
 
-var components = [eveitemcategory, eveitemgroup, eveitemtype, eveitem, itembuilder];
+var components = [eveitemcategory, eveitemgroup, eveitemtype, eveitem, itembuilder,
+        controltower, controltowertype];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

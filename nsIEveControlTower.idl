@@ -1,0 +1,36 @@
+#include "nsISupports.idl"
+#include "nsIEveItem.idl"
+interface nsIEveControlTowerType;
+interface nsIEveFuelType;
+
+typedef short nsEveFuelPurposeValue;
+
+[scriptable, uuid(a0b1bcee-fd9b-400e-b88d-086ec29f8350)]
+interface nsEveFuelPurpose {
+    const nsEveFuelPurposeValue PURPOSE_ONLINE = 1;
+    const nsEveFuelPurposeValue PURPOSE_POWER = 2;
+    const nsEveFuelPurposeValue PURPOSE_CPU = 3;
+    const nsEveFuelPurposeValue PURPOSE_REINFORCE = 4;
+};
+
+[scriptable, uuid(23165141-4cf6-47fc-9138-0abdf0d4176c)]
+interface nsIEveFuelType : nsIEveItemType {
+    readonly attribute nsIEveControlTowerType tower;
+    readonly attribute nsEveFuelPurpose purpose;
+};
+
+[scriptable, uuid(dae45824-e81d-49a7-b716-edb9d01a15f0)]
+interface nsIEveControlTowerType : nsIEveItemType {
+    void getFuelRequirements(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveFuelType retv);
+};
+
+[scriptable, uuid(8a8d5564-1efd-41c0-92b6-ef5c4a89ddc0)]
+interface nsIEveFuel : nsIEveItem { };
+
+[scriptable, uuid(82831d39-95c7-4e00-b66a-2c5f709d7005)]
+interface nsIEveControlTower : nsIEveItem {
+    void getFuel(out unsigned long count,
+        [array, size_is(count), retval] out nsIEveFuel retv);
+};
+
