@@ -3,11 +3,76 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-var EveDBService;
-var EveItemBuilder;
 const PreloadedTypes = {};
 const PreloadedGroups = {};
 const PreloadedCategories = {};
+
+var EveDBService;
+const ItemFactory = {
+    _getPreloaded:      function (storage, construct) {
+        return function (id) {
+            if (!storage['itm' + id])
+                storage['itm' + id] = construct(id);
+            return storage['itm' + id];
+        }
+    },
+
+    getItemGroupByType: function (type) {
+        return this.getItemGroup(EveDBService.getItemGroupByType(type));
+    },
+
+    getItemCategoryByGroup: function (group) {
+        return this.getItemCategory(EveDBService.getItemCategoryByGroup(group));
+    },
+
+
+    makeCategory:       function (id) {
+        return new eveitemcategory(id);
+    },
+
+    makeGroup:          function (id) {
+        return new eveitemgroup(id);
+    },
+
+    makeType:           function (id) {
+        var group   = EveDBService.getItemGroupByType(id);
+        var cat     = EveDBService.getItemCategoryByGroup(group);
+
+        switch (cat) {
+        default:
+            break;
+        };
+
+        switch (group) {
+        case Ci.nsEveItemGroupID.GROUP_CONTROL_TOWER:
+            return new controltowertype(id);
+        default:
+            break;
+        };
+
+        return new eveitemtype(id);
+    },
+    makeItem:           function (id, location, container, typeID, quantity, flag, singleton) {
+        var group   = EveDBService.getItemGroupByType(typeID);
+        var cat     = EveDBService.getItemCategoryByGroup(group);
+        var constructor = eveitem;
+        
+        switch (group) {
+        case Ci.nsEveItemGroupID.GROUP_CONTROL_TOWER:
+            constructor = controltower;
+            break;
+        default:
+            break;
+        };
+        
+        return new constructor(id, location, container, typeID,
+                quantity, flag, singleton);
+    }
+};
+
+ItemFactory.getItemCategory = ItemFactory._getPreloaded(PreloadedCategories, ItemFactory.makeCategory);
+ItemFactory.getItemGroup = ItemFactory._getPreloaded(PreloadedGroups, ItemFactory.makeGroup);
+ItemFactory.getItemType = ItemFactory._getPreloaded(PreloadedTypes, ItemFactory.makeType);
 
 function copyTo(to, from) {
     for (i in from)
@@ -32,7 +97,7 @@ eveitemcategory.prototype = {
 function eveitemgroup(groupid) {
     this._id = groupid;
     this._name = EveDBService.getItemGroupNameByID(groupid);
-    this._category = EveItemBuilder.getItemCategoryByGroup(groupid);
+    this._category = ItemFactory.getItemCategoryByGroup(groupid);
 }
 
 eveitemgroup.prototype = {
@@ -47,9 +112,11 @@ eveitemgroup.prototype = {
 };
 
 function eveitemtype(typeid) {
+    if (!typeid)
+        return;
     this._id = typeid;
     this._name = EveDBService.getItemTypeNameByID(typeid);
-    this._group = EveItemBuilder.getItemGroupByType(typeid);
+    this._group = ItemFactory.getItemGroupByType(typeid);
 }
 
 eveitemtype.prototype = {
@@ -64,10 +131,12 @@ eveitemtype.prototype = {
 };
 
 function eveitem(id, location, container, type, quantity, flag, singleton) {
+    if (!id)
+        return;
     this._id = id;
     this._location = location;
     this._container = container;
-    this._type = EveItemBuilder.getItemType(type);
+    this._type = ItemFactory.getItemType(type);
     this._quantity = quantity;
     this._flag = flag;
     this._singleton = singleton;
@@ -134,7 +203,7 @@ eveitem.prototype = {
     },
 };
 
-function controltower() { }
+function controltower() { eveitem.apply(this, arguments); }
 controltower.prototype = new eveitem();
 copyTo(controltower.prototype, {
     classDescription:   "EVE Control Tower instance",
@@ -142,13 +211,13 @@ copyTo(controltower.prototype, {
     contractID:         "@aragaer/eve/control-tower;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItem, Ci.nsIEveControlTower]),
     getFuel:            function (out) {
-        var fuel = this.getItemsInside();
-        out.value = fuel.length;
+        var fuel = this.getItemsInside(out);
+        dump(fuel+"\n");
         return fuel;
     },
 });
 
-function controltowertype() { }
+function controltowertype() { eveitemtype.apply(this, arguments); }
 controltowertype.prototype = new eveitemtype();
 copyTo(controltowertype.prototype, {
     classDescription:   "EVE Control Tower",
@@ -181,35 +250,12 @@ itembuilder.prototype = {
         category: "profile-do-change",
         service: true
     }],
-
-    _getPreloaded:      function (storage, constructor) {
-        return function (id) {
-            if (!storage['itm' + id])
-                storage['itm' + id] = new constructor(id);
-            return storage['itm' + id];
-        }
-    },
-
-    getItemGroupByType: function (type) {
-        return this.getItemGroup(EveDBService.getItemGroupByType(type));
-    },
-
-    getItemCategoryByGroup: function (group) {
-        return this.getItemCategory(EveDBService.getItemCategoryByGroup(group));
-    },
+    getItemGroupByType:         ItemFactory.getItemGroupByType,
+    getItemCategoryByGroup:     ItemFactory.getItemCategoryByGroup,
 
 /* Item Builder */
-    createItem:     function (id, location, container, typeID, quantity, flag, singleton) {
-        return new eveitem(id, location, container, typeID,
-                quantity, flag, singleton);
-    }
+    createItem:         ItemFactory.makeItem,
 };
-
-itembuilder.prototype.getItemCategory = itembuilder.prototype._getPreloaded(PreloadedCategories, eveitemcategory);
-itembuilder.prototype.getItemGroup = itembuilder.prototype._getPreloaded(PreloadedGroups, eveitemgroup);
-itembuilder.prototype.getItemType = itembuilder.prototype._getPreloaded(PreloadedTypes, eveitemtype);
-
-EveItemBuilder = itembuilder.prototype;
 
 var components = [eveitemcategory, eveitemgroup, eveitemtype, eveitem, itembuilder,
         controltower, controltowertype];
