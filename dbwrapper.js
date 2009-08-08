@@ -48,11 +48,6 @@ function dbwrapper() {
     }
 }
 
-function iteminfo(name, group) {
-    this._name = name;
-    this._group = group;
-}
-
 dbwrapper.prototype = {
     classDescription:   "EVE Online static dump",
     classID:            Components.ID("{66575bef-61c0-4ea3-9c34-17c10870e6a9}"),
@@ -121,6 +116,47 @@ dbwrapper.prototype = {
                     " mapSolarSystems where solarSystemID='"+locationID+"';", null, true);
         };
     },
+
+    getControlTowerFuelRequirements:    function (id, out) {
+        var res = [];
+        this._doSelectQuery("select resourceTypeID, purpose, quantity " +
+                "from invControlTowerResources " +
+                "where controlTowerTypeID='"+id+"' and factionID is null;",
+            function (a) {
+                res.push({wrappedJSObject:{
+                    typeid:     a[0],
+                    purpose:    a[1],
+                    usage:      a[2]
+                }});
+            }
+        );
+
+        out.value = res.length;
+        return res;
+    },
+    getControlTowerFuelForSystem:       function (id, sys, out) {
+        var res = [];
+        var sysdata = this._doSelectQuery("select reg.factionID, sys.security " +
+                "from mapSolarSystems as sys " +
+                "left join mapRegions as reg on sys.regionID = reg.regionID " +
+                "where sys.solarSystemID='"+sys+"';")[0];
+        this._doSelectQuery("select resourceTypeID, purpose, quantity " +
+                "from invControlTowerResources " +
+                "where controlTowerTypeID='"+id+"' " +
+                "and factionID='"+sysdata[0]+"' and minSecurityLevel<"+sysdata[1]+";",
+            function (a) {
+                res.push({wrappedJSObject: {
+                    typeid:     a[0],
+                    purpose:    a[1],
+                    usage:      a[2]
+                }});
+            }
+        );
+
+        out.value = res.length;
+        return res;
+    },
+
 };
 dbwrapper.prototype.getItemTypeNameByID     = dbwrapper.prototype._getPropByProp('typeName', 'typeID', 'invTypes',              true);
 dbwrapper.prototype.getItemGroupNameByID    = dbwrapper.prototype._getPropByProp('groupName', 'groupID', 'invGroups',           true);

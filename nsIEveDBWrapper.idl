@@ -13,5 +13,12 @@ interface nsIEveDBService : nsISupports {
 
     long getItemCategoryByGroup(in long id);
     long getItemGroupByType(in long id);
+
+    void getControlTowerFuelRequirements(in long type,
+        out unsigned long count,
+        [array, size_is(count), retval] out nsISupports retv);
+    void getControlTowerFuelForSystem(in long type,
+        in long sysID, out unsigned long count,
+        [array, size_is(count), retval] out nsISupports retv);
 };
 

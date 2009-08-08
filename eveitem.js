@@ -203,17 +203,91 @@ eveitem.prototype = {
     },
 };
 
-function controltower() { eveitem.apply(this, arguments); }
+function fueltype(itemtype, purpose, towertype, usage) {
+    this._type = itemtype;
+    this._purpose = +purpose;
+    this._towertype = towertype;
+    this._usage = +usage;
+}
+fueltype.prototype = {
+    classDescriptopn:   "EVE Control tower fuel",
+    classID:            Components.ID("{1a99a0bf-3f0f-4edc-a79d-404c0ce7f5c0}"),
+    contractID:         "@aragaer/eve/control-tower-fuel-type;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveFuelType]),
+    get type()          this._type,
+    get purpose()       this._purpose,
+    get towertype()     this._towertype,
+    get consumption()   this._usage,
+    toString:           function () {
+        return this._type.name;
+    }
+};
+
+function posfuel(type, count, tower) {
+    this._type = type;
+    this._count = count;
+    this._tower = tower;
+}
+posfuel.prototype = {
+    classDescriptopn:   "EVE Control tower fuel item",
+    classID:            Components.ID("{fecf0883-57fb-4974-a169-7a9be88cc6a7}"),
+    contractID:         "@aragaer/eve/control-tower-fuel;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveFuel]),
+    get type()      this._type,
+    get count()     this._count,
+    get realConsumption() {
+        var factor = 1;
+        switch(this._type.purpose) {
+        case Ci.nsEveFuelPurpose.PURPOSE_POWER:
+            factor = this._tower.powerUsage;
+            break;
+        case Ci.nsEveFuelPurpose.PURPOSE_CPU:
+            factor = this._tower.CPUUsage;
+            break;
+        case Ci.nsEveFuelPurpose.PURPOSE_ONLINE:
+        default:
+            factor = 1;
+            break;
+        }
+        return Math.round(this._type.consumption*factor);
+    },
+    toString:       function () {
+        return this._type.type.name;
+    },
+    hoursLeft:      function () {
+        var c = this.realConsumption;
+        return c
+            ? Math.floor(this._count/c)
+            : -1;
+    },
+};
+
+function controltower() {
+    eveitem.apply(this, arguments);
+    this._powerUsage = 0;
+    this._CPUUsage = 0;
+}
 controltower.prototype = new eveitem();
 copyTo(controltower.prototype, {
     classDescription:   "EVE Control Tower instance",
     classID:            Components.ID("{cfa1e940-1ca1-42f4-98b5-109cdc438641}"),
     contractID:         "@aragaer/eve/control-tower;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItem, Ci.nsIEveControlTower]),
+    get powerUsage()    this._powerUsage,
+    get CPUUsage()      this._CPUUsage,
     getFuel:            function (out) {
-        var fuel = this.getItemsInside(out);
-        dump(fuel+"\n");
-        return fuel;
+        var fuel = [];
+        var reqs = this._type.getFuelRequirements({}).
+                concat(this._type.getFuelForSystem(this._location, {}));
+
+        for each (i in this._childs)
+            fuel['f'+i.type.id] = i.quantity;
+
+        var res = reqs.map(function (r) {
+            return new posfuel(r, fuel['f'+r._type.id] || 0, this);
+        });
+        out.value = res.length;
+        return res;
     },
 });
 
@@ -224,8 +298,25 @@ copyTo(controltowertype.prototype, {
     classID:            Components.ID("{89a9aeb3-9f44-427d-bc4c-274dbef8d93f}"),
     contractID:         "@aragaer/eve/control-tower-type;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemType, Ci.nsIEveControlTowerType]),
+
+
+    _getFuelFromWrappedObj:     function(obj) {
+            i = obj.wrappedJSObject;
+            return new fueltype(
+                ItemFactory.getItemType(i.typeid),
+                i.purpose,
+                this,
+                i.usage
+            );
+    },
+
     getFuelRequirements:function (out) {
-        return [];
+        var res = EveDBService.getControlTowerFuelRequirements(this._id, out);
+        return res.map(this._getFuelFromWrappedObj);
+    },
+    getFuelForSystem:function (sys, out) {
+        var res = EveDBService.getControlTowerFuelForSystem(this._id, sys, out);
+        return res.map(this._getFuelFromWrappedObj);
     },
 });
 
@@ -258,7 +349,7 @@ itembuilder.prototype = {
 };
 
 var components = [eveitemcategory, eveitemgroup, eveitemtype, eveitem, itembuilder,
-        controltower, controltowertype];
+        controltower, controltowertype, fueltype, posfuel];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

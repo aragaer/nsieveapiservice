@@ -14,22 +14,37 @@ interface nsEveFuelPurpose {
 };
 
 [scriptable, uuid(23165141-4cf6-47fc-9138-0abdf0d4176c)]
-interface nsIEveFuelType : nsIEveItemType {
+interface nsIEveFuelType : nsISupports {
     readonly attribute nsIEveControlTowerType tower;
     readonly attribute nsEveFuelPurpose purpose;
+    readonly attribute long consumption;
+    readonly attribute nsIEveItemType type;
+    string toString();
 };
 
 [scriptable, uuid(dae45824-e81d-49a7-b716-edb9d01a15f0)]
 interface nsIEveControlTowerType : nsIEveItemType {
     void getFuelRequirements(out unsigned long count,
             [array, size_is(count), retval] out nsIEveFuelType retv);
+    void getFuelForSystem(in float sec, in long faction, out unsigned long count,
+            [array, size_is(count), retval] out nsIEveFuelType retv);
 };
 
+
+//typedef nsIEveItem nsIEveFuel;
 [scriptable, uuid(8a8d5564-1efd-41c0-92b6-ef5c4a89ddc0)]
-interface nsIEveFuel : nsIEveItem { };
+interface nsIEveFuel : nsISupports {
+    readonly attribute nsIEveFuelType type;
+    readonly attribute long count;
+    readonly attribute long realConsumption;
+    string toString();
+    short hoursLeft();
+};
 
 [scriptable, uuid(82831d39-95c7-4e00-b66a-2c5f709d7005)]
 interface nsIEveControlTower : nsIEveItem {
+    readonly attribute float powerUsage;
+    readonly attribute float CPUUsage;
     void getFuel(out unsigned long count,
         [array, size_is(count), retval] out nsIEveFuel retv);
 };
