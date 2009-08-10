@@ -74,12 +74,17 @@ ItemFactory.getItemCategory = ItemFactory._getPreloaded(PreloadedCategories, Ite
 ItemFactory.getItemGroup = ItemFactory._getPreloaded(PreloadedGroups, ItemFactory.makeGroup);
 ItemFactory.getItemType = ItemFactory._getPreloaded(PreloadedTypes, ItemFactory.makeType);
 
-function copyTo(to, from) {
-    for (i in from)
-        if (from[i] instanceof Function)
-            from[i].$ = to;
-        else
+function extend(to, from) {
+    for (i in from) {
+        var g = from.__lookupGetter__(i), s = from.__lookupSetter__(i);
+        if (g || s) {
+            if (g)
+                to.__defineGetter__(i, g);
+            if (s)
+                to.__defineSetter__(i, s);
+        } else
             to[i] = from[i];
+    }
 }
 
 function eveitemcategory(catid) {
@@ -273,7 +278,7 @@ function controltower() {
     dump(this._name + " uses " + res.grid + " grid\n");
 }
 controltower.prototype = new eveitem();
-copyTo(controltower.prototype, {
+extend(controltower.prototype, {
     classDescription:   "EVE Control Tower instance",
     classID:            Components.ID("{cfa1e940-1ca1-42f4-98b5-109cdc438641}"),
     contractID:         "@aragaer/eve/control-tower;1",
@@ -304,7 +309,7 @@ function controltowertype() {
     dump(this._name + " produces " + this._powerGrid + " grid and " + this._CPU+" CPU\n");
 }
 controltowertype.prototype = new eveitemtype();
-copyTo(controltowertype.prototype, {
+extend(controltowertype.prototype, {
     classDescription:   "EVE Control Tower",
     classID:            Components.ID("{89a9aeb3-9f44-427d-bc4c-274dbef8d93f}"),
     contractID:         "@aragaer/eve/control-tower-type;1",
@@ -330,7 +335,7 @@ copyTo(controltowertype.prototype, {
         return res.map(this._getFuelFromWrappedObj);
     },
 
-    get powerGrid()     { dump("grid: "+this._powerGrid+"\n"); return this._powerGrid },
+    get powerGrid()     this._powerGrid,
     get CPU()           this._CPU,
 });
 
