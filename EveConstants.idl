@@ -13,7 +13,7 @@ typedef long nsEveItemTypeIDValue;
 interface nsEveItemTypeID {
 };
 
-typedef long nsEveITemGroupIDValue;
+typedef long nsEveItemGroupIDValue;
 
 [scriptable, uuid(8ff27734-8386-4c2d-a363-753eb98ad912)]
 interface nsEveItemGroupID {

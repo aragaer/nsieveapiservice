@@ -46,6 +46,15 @@ function dbwrapper() {
             "(itemID integer, itemName char, categoryID integer, " +
             "groupID integer, typeID integer, primary key (itemID));");
     }
+
+    try {
+        this._doSelectQuery("select 1 from local.starbaseConfig;");
+    } catch (e) {
+        this._executeSimpleSQL("CREATE TABLE local.starbaseConfig " +
+            "(itemID integer, starbaseID integer, isOnline integer, " +
+            "itemType integer, primary key (itemID));");
+    }
+
 }
 
 dbwrapper.prototype = {
@@ -161,8 +170,20 @@ dbwrapper.prototype = {
                 "from invTypes as t " +
                 "left join dgmTypeAttributes as a48 on t.typeID = a48.typeID " +
                 "left join dgmTypeAttributes as a11 on t.typeID = a11.typeID " +
-                "where t.typeID='"+type+"';");
-        return {wrappedJSObject : { grid : res[0], CPU : res[1]} };
+                "where t.typeID='"+type+"' " +
+                "and a11.attributeID=11 and a48.attributeID=48;")[0];
+        return {wrappedJSObject : { grid : +res[0], cpu : +res[1]} };
+    },
+
+
+    getGridAndCPUUsage:         function (towerID) {
+        var res = this._doSelectQuery("select sum(a30.valueInt), sum(a50.valueInt) " +
+                "from local.starbaseConfig as lsc " +
+                "left join dgmTypeAttributes as a30 on lsc.itemType = a30.typeID " +
+                "left join dgmTypeAttributes as a50 on lsc.itemType = a50.typeID " +
+                "where lsc.starbaseID='"+towerID+"' " +
+                "and a30.attributeID=30 and a50.attributeID=50;")[0];
+        return {wrappedJSObject : { grid : +res[0], cpu : +res[1]} };
     },
 };
 dbwrapper.prototype.getItemTypeNameByID     = dbwrapper.prototype._getPropByProp('typeName', 'typeID', 'invTypes',              true);

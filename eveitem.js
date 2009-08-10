@@ -76,7 +76,10 @@ ItemFactory.getItemType = ItemFactory._getPreloaded(PreloadedTypes, ItemFactory.
 
 function copyTo(to, from) {
     for (i in from)
-        to[i] = from[i];
+        if (from[i] instanceof Function)
+            from[i].$ = to;
+        else
+            to[i] = from[i];
 }
 
 function eveitemcategory(catid) {
@@ -239,10 +242,10 @@ posfuel.prototype = {
         var factor = 1;
         switch(this._type.purpose) {
         case Ci.nsEveFuelPurpose.PURPOSE_POWER:
-            factor = this._tower.powerUsage;
+            factor = this._tower.powerUsage/this._tower.type.powerGrid;
             break;
         case Ci.nsEveFuelPurpose.PURPOSE_CPU:
-            factor = this._tower.CPUUsage;
+            factor = this._tower.CPUUsage/this._tower.type.CPU;
             break;
         case Ci.nsEveFuelPurpose.PURPOSE_ONLINE:
         default:
@@ -264,8 +267,10 @@ posfuel.prototype = {
 
 function controltower() {
     eveitem.apply(this, arguments);
-    this._powerUsage = 0;
-    this._CPUUsage = 0;
+    var res = EveDBService.getGridAndCPUUsage(this._id).wrappedJSObject;
+    this._powerUsage = res.grid;
+    this._CPUUsage = res.cpu;
+    dump(this._name + " uses " + res.grid + " grid\n");
 }
 controltower.prototype = new eveitem();
 copyTo(controltower.prototype, {
@@ -291,7 +296,13 @@ copyTo(controltower.prototype, {
     },
 });
 
-function controltowertype() { eveitemtype.apply(this, arguments); }
+function controltowertype() {
+    eveitemtype.apply(this, arguments);
+    var res = EveDBService.getGridAndCPUForTower(this._id).wrappedJSObject;
+    this._powerGrid = res.grid;
+    this._CPU = res.cpu;
+    dump(this._name + " produces " + this._powerGrid + " grid and " + this._CPU+" CPU\n");
+}
 controltowertype.prototype = new eveitemtype();
 copyTo(controltowertype.prototype, {
     classDescription:   "EVE Control Tower",
@@ -318,6 +329,9 @@ copyTo(controltowertype.prototype, {
         var res = EveDBService.getControlTowerFuelForSystem(this._id, sys, out);
         return res.map(this._getFuelFromWrappedObj);
     },
+
+    get powerGrid()     { dump("grid: "+this._powerGrid+"\n"); return this._powerGrid },
+    get CPU()           this._CPU,
 });
 
 function itembuilder() { }

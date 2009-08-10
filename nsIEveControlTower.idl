@@ -45,8 +45,8 @@ interface nsIEveFuel : nsISupports {
 
 [scriptable, uuid(82831d39-95c7-4e00-b66a-2c5f709d7005)]
 interface nsIEveControlTower : nsIEveItem {
-    readonly attribute float powerUsage;
-    readonly attribute float CPUUsage;
+    readonly attribute long powerUsage;
+    readonly attribute long CPUUsage;
     void getFuel(out unsigned long count,
         [array, size_is(count), retval] out nsIEveFuel retv);
 };

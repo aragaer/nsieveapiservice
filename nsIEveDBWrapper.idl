@@ -14,6 +14,7 @@ interface nsIEveDBService : nsISupports {
     long getItemCategoryByGroup(in long id);
     long getItemGroupByType(in long id);
 
+    void getGridAndCPUUsage(in long towerID, [retval] out nsISupports retv);
     void getGridAndCPUForTower(in long type, [retval] out nsISupports retv);
     void getControlTowerFuelRequirements(in long type,
         out unsigned long count,
