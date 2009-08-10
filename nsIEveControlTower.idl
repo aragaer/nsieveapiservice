@@ -24,6 +24,8 @@ interface nsIEveFuelType : nsISupports {
 
 [scriptable, uuid(dae45824-e81d-49a7-b716-edb9d01a15f0)]
 interface nsIEveControlTowerType : nsIEveItemType {
+    readonly attribute long powerGrid;
+    readonly attribute long CPU;
     void getFuelRequirements(out unsigned long count,
             [array, size_is(count), retval] out nsIEveFuelType retv);
     void getFuelForSystem(in float sec, in long faction, out unsigned long count,

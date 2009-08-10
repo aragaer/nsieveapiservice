@@ -156,7 +156,14 @@ dbwrapper.prototype = {
         out.value = res.length;
         return res;
     },
-
+    getGridAndCPUForTower:      function (type) {
+        var res = this._doSelectQuery("select a11.valueInt, a48.valueInt " +
+                "from invTypes as t " +
+                "left join dgmTypeAttributes as a48 on t.typeID = a48.typeID " +
+                "left join dgmTypeAttributes as a11 on t.typeID = a11.typeID " +
+                "where t.typeID='"+type+"';");
+        return {wrappedJSObject : { grid : res[0], CPU : res[1]} };
+    },
 };
 dbwrapper.prototype.getItemTypeNameByID     = dbwrapper.prototype._getPropByProp('typeName', 'typeID', 'invTypes',              true);
 dbwrapper.prototype.getItemGroupNameByID    = dbwrapper.prototype._getPropByProp('groupName', 'groupID', 'invGroups',           true);
