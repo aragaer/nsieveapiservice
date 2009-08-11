@@ -37,6 +37,7 @@ const ItemFactory = {
     makeType:           function (id) {
         var group   = EveDBService.getItemGroupByType(id);
         var cat     = EveDBService.getItemCategoryByGroup(group);
+        var constructor = eveitemtype;
 
         switch (cat) {
         default:
@@ -45,12 +46,13 @@ const ItemFactory = {
 
         switch (group) {
         case Ci.nsEveItemGroupID.GROUP_CONTROL_TOWER:
-            return new controltowertype(id);
+            constructor = controltowertype;
+            break;
         default:
             break;
         };
 
-        return new eveitemtype(id);
+        return new constructor(id);
     },
     makeItem:           function (id, location, container, typeID, quantity, flag, singleton) {
         var group   = EveDBService.getItemGroupByType(typeID);

@@ -28,7 +28,7 @@ interface nsIEveControlTowerType : nsIEveItemType {
     readonly attribute long CPU;
     void getFuelRequirements(out unsigned long count,
             [array, size_is(count), retval] out nsIEveFuelType retv);
-    void getFuelForSystem(in float sec, in long faction, out unsigned long count,
+    void getFuelForSystem(in long systemID, out unsigned long count,
             [array, size_is(count), retval] out nsIEveFuelType retv);
 };
 
