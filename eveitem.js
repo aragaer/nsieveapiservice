@@ -235,6 +235,7 @@ function posfuel(type, count, tower) {
     this._type = type;
     this._count = count;
     this._tower = tower;
+    this._tt = tower.type.QueryInterface(Ci.nsIEveControlTowerType);
 }
 posfuel.prototype = {
     classDescriptopn:   "EVE Control tower fuel item",
@@ -247,10 +248,10 @@ posfuel.prototype = {
         var factor = 1;
         switch(this._type.purpose) {
         case Ci.nsEveFuelPurpose.PURPOSE_POWER:
-            factor = this._tower.powerUsage/this._tower.type.powerGrid;
+            factor = this._tower.powerUsage/this._tt.powerGrid;
             break;
         case Ci.nsEveFuelPurpose.PURPOSE_CPU:
-            factor = this._tower.CPUUsage/this._tower.type.CPU;
+            factor = this._tower.CPUUsage/this._tt.CPU;
             break;
         case Ci.nsEveFuelPurpose.PURPOSE_ONLINE:
         default:
@@ -293,8 +294,9 @@ extend(controltower.prototype, {
         for each (i in this._childs)
             fuel['f'+i.type.id] = i.quantity;
 
+        var me = this;
         var res = reqs.map(function (r) {
-            return new posfuel(r, fuel['f'+r._type.id] || 0, this);
+            return new posfuel(r, fuel['f'+r._type.id] || 0, me);
         });
         out.value = res.length;
         return res;
