@@ -4,28 +4,30 @@ const Ci = Components.interfaces;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 var ItemBuilder;
+var db;
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
     serverStatus:   {
         url:    "/server/ServerStatus.xml.aspx",
-        cb:     EveServerStatus.fromXML,
+        xmlcb:  EveServerStatus.fromXML,
     },
     characters:     {
         url:    "/account/Characters.xml.aspx",
-        cb:     processCharacters,
+        xmlcb:  processCharacters,
     },
     charsheet:      {
         url:    "/char/CharacterSheet.xml.aspx",
-        cb:     processCharsheet,
+        xmlcb:  processCharsheet,
     },
     charassets:      {
         url:    "/char/AssetList.xml.aspx",
-        cb:     processCharassets,
+        xmlcb:  processCharassets,
     },
     corpassets:      {
         url:    "/corp/AssetList.xml.aspx",
-        cb:     processCharassets,
+        xmlcb:  processCharassets,
+        db:     true
     },
 };
 
@@ -33,6 +35,26 @@ function EveApiService() {
     this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
             getService(Ci.nsICacheService).createSession("EVE API",
                     Ci.nsICache.STORE_OFFLINE, true);
+
+    try {
+        var static = Cc["@mozilla.org/preferences-service;1"].
+            getService(Ci.nsIPrefBranch).getCharPref("eve.static_dump_path");
+        dump(static+"\n");
+        var file = Cc["@mozilla.org/file/local;1"].
+                createInstance(Ci.nsILocalFile);
+        file.initWithPath(static);
+        this.conn = Cc["@mozilla.org/storage/service;1"].
+                getService(Ci.mozIStorageService).
+                openDatabase(file);
+    } catch (e) {
+        dump(e.toString()+"\n");
+        return;
+    }
+
+    this.conn.executeSimpleSQL("PRAGMA synchronous = OFF");
+    this.conn.executeSimpleSQL("PRAGMA temp_store = MEMORY");
+
+    db = this;
 }
 
 EveApiService.prototype = {
@@ -41,7 +63,7 @@ EveApiService.prototype = {
     contractID:       "@aragaer.com/eve-api;1",
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIEveApiService]),
     _xpcom_categories: [{
-        category: "xpcom-startup",
+        category: "profile-do-change",
         service: true
     }],
 
@@ -72,6 +94,34 @@ EveApiService.prototype = {
         return result;
     },
 
+    _queryCharacterAssets:      function (id, key, charID, where, out) {
+        var result = this._fetchDB('charassets',
+                {userID: id, apiKey: key, characterID: charID},
+                "select * from local.items where " +
+                [where, "owner="+characterID].join(" and ") + ";");
+        out.value = result.length;
+        return result;
+    },
+
+    _fetchDB:           function (type, data, query, cb) {
+        var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
+        var url = EVEAPIURL+EVEURLS[type].url;
+        var cacheKey = this._createKey(url, data);
+
+        var time = this._doSelectQuery("select expires from local.cache where url='"+cacheKey+"';");
+        if (time*1000 > Date.now()) {
+            var res = this._fetchXML(url, poststring, cachekey);
+            if (res)
+                EVEURLS[type].xmlcb(res);
+
+            time = Date.UTCFromEveTimeString(
+                    evaluateXPath(res, "/eveapi/cachedUntil/text()")[0].data)/1000);
+//            this._executeSimpleSQL("replace into local.cache values('"+cacheKey+"',"+time+");");
+        }
+
+        return this._doSelectQuery(query, cb);
+    }
+
     _makeHash:          function (str) {
         var converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"].
                 createInstance(Ci.nsIScriptableUnicodeConverter);
@@ -90,10 +140,16 @@ EveApiService.prototype = {
 
     _performRequest:    function (type, data) {
         var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
-        var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, poststring);
+        var url = EVEAPIURL+EVEURLS[type].url;
+        var cacheKey = this._createKey(url, data);
+        var res = this._fetchXML(url, poststring, cacheKey);
         return res
-            ? EVEURLS[type].cb(res)
+            ? EVEURLS[type].xmlcb(res)
             : null;
+    },
+
+    _createKey:     function (url, data) {
+        return url + '?stamp=' + this._makeHash(data);
     },
 
     _fromCache:     function (cd) {
@@ -107,10 +163,8 @@ EveApiService.prototype = {
         return result;
      },
 
-    _fetchXML:    function (url, data) {
+    _fetchXML:    function (url, data, cacheKey) {
         var result;
-        var cacheKey = url + '?stamp=' + this._makeHash(data);
-        dump("Fetching "+cacheKey+"\n");
         var cd = this.cache_session.openCacheEntry(cacheKey, Ci.nsICache.ACCESS_READ_WRITE, true);
         if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE   // It exists
                 &&  cd.expirationTime*1000 > Date.now()) {      // And it is valid
@@ -151,6 +205,31 @@ EveApiService.prototype = {
 
         return result;
     },
+
+    _executeSimpleSQL:  function (query) {
+        dump("Executing "+query+"\n");
+        this.conn.executeSimpleSQL(query);
+    },
+
+    _doSelectQuery:     function (query, recHandler, nodump) {
+        var rv = [];
+        if (!nodump)
+            dump("Executing "+query+"\n");
+        var statement = this.conn.createStatement(query);
+        while (statement.executeStep()) {
+            var c;
+            var thisArray = [];
+            for (c = 0; c < statement.numEntries; c++)
+                thisArray.push(statement.getString(c));
+            if (recHandler)
+                recHandler(thisArray);
+            if (thisArray.length)
+                rv.push(thisArray);
+        }
+        statement.reset();
+        return rv;
+    },
+
 };
 
 function EveServerStatus(online, players) {

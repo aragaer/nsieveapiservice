@@ -55,6 +55,22 @@ function dbwrapper() {
             "itemType integer, primary key (itemID));");
     }
 
+    try {
+        this._doSelectQuery("select 1 from local.items;");
+    } catch (e) {
+        this._executeSimpleSQL("CREATE TABLE local.items " +
+            "(itemID integer, typeID integer, locationID integer, " +
+            "containerID integer, " +
+            "quantity integer, flag integer, singleton integer, " +
+            "owner integer, primary key (itemID));");
+    }
+
+    try {
+        this._doSelectQuery("select 1 from local.cache;");
+    } catch (e) {
+        this._executeSimpleSQL("CREATE TABLE local.cache " +
+            "(url char, expires integer, primary key(url));");
+    }
 }
 
 dbwrapper.prototype = {
