@@ -11,6 +11,7 @@ typedef long nsEveItemTypeIDValue;
 
 [scriptable, uuid(d1c2edf3-635c-460b-b020-b386841c528d)]
 interface nsEveItemTypeID {
+    const nsEveItemTypeIDValue TYPE_OFFICE = 27;
 };
 
 typedef long nsEveItemGroupIDValue;
