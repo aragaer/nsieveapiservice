@@ -5,19 +5,18 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 function dbwrapper() {
     try {
-        var static = Cc["@mozilla.org/preferences-service;1"].
-            getService(Ci.nsIPrefBranch).getCharPref("eve.static_dump_path");
-        dump(static+"\n");
-        var file = Cc["@mozilla.org/file/local;1"].
-                createInstance(Ci.nsILocalFile);
-        file.initWithPath(static);
+        var static = Cc["@mozilla.org/file/directory_service;1"].
+                getService(Ci.nsIProperties).get('CurProcD', Ci.nsIFile);
+        static.append('jaet.db');
+
         this.conn = Cc["@mozilla.org/storage/service;1"].
                 getService(Ci.mozIStorageService).
-                openDatabase(file);
+                openDatabase(static);
     } catch (e) {
         dump(e.toString()+"\n");
         return;
     }
+    dump("Internal DB connection initialized\n");
 
     this.conn.executeSimpleSQL("PRAGMA synchronous = OFF");
     this.conn.executeSimpleSQL("PRAGMA temp_store = MEMORY");
@@ -55,6 +54,7 @@ function dbwrapper() {
             "itemType integer, primary key (itemID));");
     }
 
+    dump("Internal DB initialized\n");
 }
 
 dbwrapper.prototype = {
