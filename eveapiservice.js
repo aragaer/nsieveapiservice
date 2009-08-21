@@ -45,6 +45,8 @@ EveApiService.prototype = {
         service: true
     }],
 
+    _error: "",
+
     getServerStatus:    function () {
         return this._performRequest('serverStatus');
     },
@@ -89,6 +91,7 @@ EveApiService.prototype = {
     },
 
     _performRequest:    function (type, data) {
+        this._error = "";
         var poststring = [i+'='+escape(data[i]) for (i in data)].join('&');
         var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, poststring);
         return res
@@ -136,6 +139,13 @@ EveApiService.prototype = {
 
         result = req.responseXML;
 
+        var error = evaluateXPath(result, "/eveapi/error/text()")[0];
+        if (error) {
+            dump(error+"\n");
+            this._error = error.data;
+            return this._fromCache(cd);
+        }
+
         var serializer = Cc["@mozilla.org/xmlextras/xmlserializer;1"].
             createInstance(Ci.nsIDOMSerializer);
         var os = cd.openOutputStream(0);
@@ -151,6 +161,8 @@ EveApiService.prototype = {
 
         return result;
     },
+
+    get error()     this._error,
 };
 
 function EveServerStatus(online, players) {
