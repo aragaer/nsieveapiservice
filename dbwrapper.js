@@ -16,6 +16,10 @@ function dbwrapper() {
         dump(e.toString()+"\n");
         return;
     }
+    if (!this.conn) {
+        dump("Database not found!\n");
+        return;
+    }
     dump("Internal DB connection initialized\n");
 
     this.conn.executeSimpleSQL("PRAGMA synchronous = OFF");
@@ -76,7 +80,13 @@ dbwrapper.prototype = {
         var rv = [];
         if (!nodump)
             dump("Executing "+query+"\n");
-        var statement = this.conn.createStatement(query);
+        var statement;
+        try {
+            statement = this.conn.createStatement(query);
+        } catch (e) {
+            dump("Error executing " + query + "\n");
+            return [];
+        }
         while (statement.executeStep()) {
             var c;
             var thisArray = [];

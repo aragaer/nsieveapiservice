@@ -96,7 +96,7 @@ EveApiService.prototype = {
         var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, poststring);
         return res
             ? EVEURLS[type].cb(res)
-            : null;
+            : [];
     },
 
     _fromCache:     function (cd) {
@@ -143,7 +143,8 @@ EveApiService.prototype = {
         if (error) {
             dump(error+"\n");
             this._error = error.data;
-            return this._fromCache(cd);
+            if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE)
+                return this._fromCache(cd);
         }
 
         var serializer = Cc["@mozilla.org/xmlextras/xmlserializer;1"].
